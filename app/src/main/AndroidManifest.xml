@@ -12,11 +12,15 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.RadioPlayer">
+
         <activity
             android:name=".SaveTracksActivity"
+            android:label="@string/saveTracks_activity_name"
             android:exported="false" />
         <activity
             android:name=".SettingsActivity"
+            android:parentActivityName=".MainActivity"
+            android:label="@string/settings_activity_name"
             android:exported="false" />
         <activity
             android:name=".MainActivity"

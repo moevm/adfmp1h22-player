@@ -11,6 +11,7 @@ import android.util.Log
 import android.widget.SeekBar
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import androidx.appcompat.widget.Toolbar
 import kotlinx.android.synthetic.main.activity_settings.*
 
 
@@ -36,6 +37,11 @@ class SettingsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
+
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        Log.d("TAG", supportActionBar.toString())
+
+
 
         pref = getSharedPreferences("Table", Context.MODE_PRIVATE)
         val countTracks = pref?.getInt("progress", 10)!!
@@ -91,7 +97,8 @@ class SettingsActivity : AppCompatActivity() {
             1 -> {
                 if(data == null) return
                 // Пока так. Пока не получилось нормально имя папки достать из пути
-                var name = data.data.toString()
+                var name = data.data?.path.toString().split(":")[1]
+//                Log.d("TAG", data.data?.path.toString().split(":")[1])
                 pref?.edit()?.putString("folder", name)?.apply()
                 button.setText(name)
             }
