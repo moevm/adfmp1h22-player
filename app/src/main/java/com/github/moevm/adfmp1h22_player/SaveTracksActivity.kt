@@ -9,6 +9,8 @@ class SaveTracksActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_sava_tracks)
 
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+
         imageButton.setOnClickListener{
             imageButton.visibility = android.view.View.GONE
             imageButton2.visibility = android.view.View.VISIBLE

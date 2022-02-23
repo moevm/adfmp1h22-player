@@ -14,7 +14,6 @@ import androidx.core.app.ActivityCompat
 import androidx.appcompat.widget.Toolbar
 import kotlinx.android.synthetic.main.activity_settings.*
 
-
 class SettingsActivity : AppCompatActivity() {
 
     fun isStoragePermissionGranted(): Boolean {
@@ -29,9 +28,6 @@ class SettingsActivity : AppCompatActivity() {
         } else return true
     }
 
-
-
-
     var pref : SharedPreferences? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -39,9 +35,6 @@ class SettingsActivity : AppCompatActivity() {
         setContentView(R.layout.activity_settings)
 
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        Log.d("TAG", supportActionBar.toString())
-
-
 
         pref = getSharedPreferences("Table", Context.MODE_PRIVATE)
         val countTracks = pref?.getInt("progress", 10)!!
@@ -100,7 +93,7 @@ class SettingsActivity : AppCompatActivity() {
                 var name = data.data?.path.toString().split(":")[1]
 //                Log.d("TAG", data.data?.path.toString().split(":")[1])
                 pref?.edit()?.putString("folder", name)?.apply()
-                button.setText(name)
+                button.text = name.toString()
             }
         }
     }

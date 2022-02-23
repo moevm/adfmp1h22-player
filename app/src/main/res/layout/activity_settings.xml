@@ -6,60 +6,93 @@
     android:layout_height="match_parent"
     tools:context=".SettingsActivity">
 
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical">
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/leftGuideline"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_begin="20dp"/>
 
-        <TextView
-            android:id="@+id/maxTracks"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/maxTracks" />
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/rightGuideline"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_end="20dp"/>
 
-        <Space
-            android:layout_width="match_parent"
-            android:layout_height="31dp" />
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/topGuideline"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_begin="20dp"/>
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal">
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/bottomGuideline"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_end="20dp"/>
 
-            <TextView
-                android:id="@+id/progressSeekBar"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:gravity="center" />
+    <TextView
+        android:id="@+id/maxTracks"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="@string/maxTracks"
+        style="@style/textViewStyle"
+        app:layout_constraintStart_toStartOf="@id/leftGuideline"
+        app:layout_constraintEnd_toEndOf="@id/rightGuideline"
+        app:layout_constraintTop_toTopOf="@id/topGuideline" />
 
-            <SeekBar
-                android:id="@+id/seekBar"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:max="100"
-                android:min="0" />
-        </LinearLayout>
+    <TextView
+        android:id="@+id/progressSeekBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="100"
+        android:gravity="center"
+        style="@style/textViewStyle"
+        app:layout_constraintHorizontal_chainStyle="packed"
+        app:layout_constraintStart_toStartOf="@id/leftGuideline"
+        app:layout_constraintEnd_toStartOf="@id/seekBar"
+        app:layout_constraintTop_toBottomOf="@id/maxTracks" />
 
-        <Space
-            android:layout_width="match_parent"
-            android:layout_height="40dp" />
+    <SeekBar
+        android:id="@+id/seekBar"
+        android:layout_width="250dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:max="100"
+        android:min="0"
+        android:layout_marginTop="7dp"
+        app:layout_constraintStart_toEndOf="@id/progressSeekBar"
+        app:layout_constraintEnd_toEndOf="@id/rightGuideline"
+        app:layout_constraintTop_toBottomOf="@id/maxTracks"
+        />
 
-        <TextView
-            android:id="@+id/saveTracks"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/saveTracks" />
+    <androidx.constraintlayout.widget.Group
+        android:id="@+id/groupCountTracks"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:constraint_referenced_ids="progressSeekBar, seekBar"/>
 
-        <Space
-            android:layout_width="match_parent"
-            android:layout_height="14dp" />
+    <TextView
+        android:id="@+id/saveTracks"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="@string/saveTracks"
+        android:layout_marginTop="20dp"
+        style="@style/textViewStyle"
+        app:layout_constraintStart_toStartOf="@id/leftGuideline"
+        app:layout_constraintEnd_toEndOf="@id/rightGuideline"
+        app:layout_constraintTop_toBottomOf="@id/seekBar"/>
 
-        <Button
-            android:id="@+id/button"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Button" />
-    </LinearLayout>
+    <Button
+        android:id="@+id/button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintHorizontal_bias="0.2"
+        app:layout_constraintStart_toStartOf="@id/leftGuideline"
+        app:layout_constraintEnd_toEndOf="@id/rightGuideline"
+        app:layout_constraintTop_toBottomOf="@id/saveTracks"
+        />
 </androidx.constraintlayout.widget.ConstraintLayout>
