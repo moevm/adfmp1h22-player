@@ -27,6 +27,7 @@ class MainActivity : AppCompatActivity() {
                 else -> throw IllegalArgumentException("Invalid fragment index")
             }
         }
+        pager.setCurrentItem(1, false)
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -36,10 +37,6 @@ class MainActivity : AppCompatActivity() {
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
-            R.id.tmp_save_tracks ->{
-                startActivity(Intent(this, SaveTracksActivity::class.java))
-                true
-            }
             R.id.settings -> {
                 startActivity(Intent(this, SettingsActivity::class.java))
                 true

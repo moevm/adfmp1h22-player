@@ -6,4 +6,10 @@
     <string name="saveTracks">Saved tracks directory</string>
     <string name="fab_add_station">Add station</string>
     <string name="fab_add_station_tooltip">Add station from catalog</string>
+    <string name="playpause_desc">Toggle play/pause</string>
+    <string name="playpause_tooltip">Play/pause</string>
+    <string name="savetracks_desc">Open Save Tracks screen</string>
+    <string name="savetracks_tooltip">Save tracks</string>
+    <string name="stop_desc">Stop playing the current station</string>
+    <string name="stop_tooltip">Stop playback</string>
 </resources>
