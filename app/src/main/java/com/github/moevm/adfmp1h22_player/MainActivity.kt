@@ -1,6 +1,5 @@
 package com.github.moevm.adfmp1h22_player
 
-import android.widget.Toast
 import android.view.Menu
 import android.view.MenuItem
 import androidx.appcompat.app.AppCompatActivity
@@ -18,12 +17,6 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-
-        add_fab.setOnClickListener {
-            Toast.makeText(this, "No Add station activity yet",
-                           Toast.LENGTH_LONG)
-                .show()
-        }
 
         pager.adapter = object : FragmentStateAdapter(this) {
             override fun getItemCount(): Int = 2
