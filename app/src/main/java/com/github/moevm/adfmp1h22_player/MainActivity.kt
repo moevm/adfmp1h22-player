@@ -1,5 +1,7 @@
 package com.github.moevm.adfmp1h22_player
 
+import android.view.Menu
+import android.view.MenuItem
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.content.Intent
@@ -9,15 +11,24 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+    }
 
-        button.setOnClickListener {
-            val intent = Intent(this, SettingsActivity::class.java )
-            startActivity(intent)
-        }
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.main_menu, menu)
+        return true
+    }
 
-        button2.setOnClickListener{
-            val intent = Intent(this, SaveTracksActivity::class.java )
-            startActivity(intent)
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.tmp_save_tracks ->{
+                startActivity(Intent(this, SaveTracksActivity::class.java))
+                true
+            }
+            R.id.settings -> {
+                startActivity(Intent(this, SettingsActivity::class.java))
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
         }
     }
 }
