@@ -4,4 +4,6 @@
     <string name="saveTracks_activity_name">Save tracks</string>
     <string name="maxTracks">Max stored tracks</string>
     <string name="saveTracks">Saved tracks directory</string>
+    <string name="fab_add_station">Add station</string>
+    <string name="fab_add_station_tooltip">Add station from catalog</string>
 </resources>
