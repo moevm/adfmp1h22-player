@@ -1,5 +1,6 @@
 package com.github.moevm.adfmp1h22_player
 
+import android.widget.Toast
 import android.view.Menu
 import android.view.MenuItem
 import androidx.appcompat.app.AppCompatActivity
@@ -41,6 +42,12 @@ class MainActivity : AppCompatActivity() {
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
+            R.id.playback_history -> {
+                Toast.makeText(this, "No Playback history activity yet",
+                               Toast.LENGTH_LONG)
+                    .show()
+                true
+            }
             R.id.settings -> {
                 startActivity(Intent(this, SettingsActivity::class.java))
                 true

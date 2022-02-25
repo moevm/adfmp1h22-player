@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<menu xmlns:android="http://schemas.android.com/apk/res/android">
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+      xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item android:id="@+id/playback_history"
+          android:title="@string/playback_history_activity_name"
+          android:icon="@drawable/ic_history_24"
+          app:showAsAction="ifRoom"
+          />
     <item android:id="@+id/settings"
           android:title="@string/settings_activity_name"
           />
