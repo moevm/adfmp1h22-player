@@ -23,10 +23,21 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="32dp"
-        android:text="Artist — Track"
+        android:text="Track"
+        style="@style/PlayerTrackTitleText"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/iv_cover" />
+
+    <TextView
+        android:id="@+id/tv_trackartist"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Artist"
+        style="@style/PlayerTrackArtistText"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/tv_tracktitle" />
 
     <ImageButton
         android:id="@+id/ib_playpause"
@@ -39,7 +50,7 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/tv_tracktitle"
+        app:layout_constraintTop_toBottomOf="@+id/tv_trackartist"
         app:layout_constraintVertical_bias="0.3" />
 
     <ImageButton
