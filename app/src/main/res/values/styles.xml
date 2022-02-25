@@ -6,7 +6,4 @@
     <style name="textItemRV">
         <item name="android:textSize">18dp</item>
     </style>
-    <style name="notActive">
-        <item name="android:textColor">@color/material_on_background_disabled</item>
-    </style>
 </resources>
