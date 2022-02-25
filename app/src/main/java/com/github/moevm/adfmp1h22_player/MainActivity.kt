@@ -22,7 +22,11 @@ class MainActivity : AppCompatActivity() {
             override fun getItemCount(): Int = 2
 
             override fun createFragment(pos: Int): Fragment = when (pos) {
-                0 -> PlayerFragment()
+                0 -> PlayerFragment().also {
+                    it.onStopListener = {
+                        pager.currentItem = 1
+                    }
+                }
                 1 -> StationListFragment()
                 else -> throw IllegalArgumentException("Invalid fragment index")
             }
