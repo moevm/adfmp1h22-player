@@ -14,5 +14,15 @@ class StationListFragment : Fragment(R.layout.fragment_station_list) {
                            Toast.LENGTH_LONG)
                 .show()
         }
+
+        val a = StationListAdapter {
+            Toast.makeText(context, "Station: ${it.name}",
+                           Toast.LENGTH_SHORT)
+                .show()
+        }
+
+        station_list.adapter = a
+        val l = mutableListOf(Station("abc"), Station("def"), Station("ghi"))
+        a.submitList(l)
     }
 }
