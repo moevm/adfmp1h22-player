@@ -1,5 +1,6 @@
 package com.github.moevm.adfmp1h22_player
 
+import android.util.Log
 import android.widget.Toast
 import android.view.Menu
 import android.view.MenuItem
@@ -32,7 +33,13 @@ class MainActivity : AppCompatActivity() {
                 else -> throw IllegalArgumentException("Invalid fragment index")
             }
         }
-        pager.setCurrentItem(1, false)
+        Log.d("LIFECYCLE", "creating main activity with $savedInstanceState")
+        pager.setCurrentItem(savedInstanceState?.getInt("page") ?: 1, false)
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        Log.d("LIFECYCLE", "saving main activity")
+        outState.putInt("page", pager.currentItem)
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
