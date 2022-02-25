@@ -65,6 +65,9 @@ class SettingsActivity : AppCompatActivity() {
             }
         }
 
+        intent = Intent(this, SaveTracksActivity::class.java)
+        intent.putExtra("progress", countTracks)
+
     }
 
     override fun onRequestPermissionsResult(
