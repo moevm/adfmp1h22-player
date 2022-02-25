@@ -7,9 +7,32 @@ import androidx.fragment.app.Fragment
 import kotlinx.android.synthetic.main.fragment_player.*
 
 class PlayerFragment : Fragment(R.layout.fragment_player) {
-    var isPlaying: Boolean = false
+
+    enum class PlaybackState {
+        STOPPED, PAUSED, PLAYING,
+    }
+
+    private var state: PlaybackState = PlaybackState.PAUSED
 
     var onStopListener: (() -> Unit)? = null
+
+    fun setPlayingState(value: PlaybackState) {
+        state = value
+        when (value) {
+            PlaybackState.STOPPED -> ib_playpause.run {
+                setImageResource(R.drawable.ic_play_64)
+                setEnabled(false)
+            }
+            PlaybackState.PAUSED -> ib_playpause.run {
+                setImageResource(R.drawable.ic_play_64)
+                setEnabled(true)
+            }
+            PlaybackState.PLAYING -> ib_playpause.run {
+                setImageResource(R.drawable.ic_pause_64)
+                setEnabled(true)
+            }
+        }
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         ib_savetracks.setOnClickListener {
@@ -19,11 +42,15 @@ class PlayerFragment : Fragment(R.layout.fragment_player) {
         }
 
         ib_playpause.setOnClickListener {
-            isPlaying = !isPlaying
-            // TODO: toggle isPlaying, replace icon
+            setPlayingState(when (state) {
+                PlaybackState.PLAYING -> PlaybackState.PAUSED
+                else -> PlaybackState.PLAYING
+            })
         }
+        setPlayingState(PlaybackState.PAUSED)
 
         ib_stop.setOnClickListener {
+            // TODO: set playback state to STOPPED
             onStopListener?.let { it() }
         }
     }
