@@ -1,18 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout
+<LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:paddingStart="20dp"
     android:paddingEnd="20dp"
+    android:orientation="horizontal"
+    android:gravity="start|center_vertical"
     >
+
+    <ImageView
+        android:id="@+id/station_favicon"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:maxWidth="54dp"
+        android:maxHeight="54dp"
+        android:scaleType="fitCenter"
+        android:src="@drawable/ic_station_placeholder_54"
+        />
 
     <TextView
         android:id="@+id/station_name"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="start|center_vertical"
         style="@style/StationNameText"
+        android:lines="1"
+        android:ellipsize="end"
         />
 
-</FrameLayout>
+</LinearLayout>

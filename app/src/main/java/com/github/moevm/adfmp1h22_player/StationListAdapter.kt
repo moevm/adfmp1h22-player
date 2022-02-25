@@ -13,7 +13,7 @@ class StationListAdapter(private val onClick: (Station) -> Unit) :
     ListAdapter<Station, StationListAdapter.StationViewHolder>(DiffStations) {
 
     class StationViewHolder(
-        item: View,
+        private val item: View,
         private val onClick: (Station) -> Unit
     ) : RecyclerView.ViewHolder(item) {
 
@@ -33,6 +33,7 @@ class StationListAdapter(private val onClick: (Station) -> Unit) :
             currentStation = station
 
             tv_station_name.text = station.name
+            item.tooltipText = station.name
         }
     }
 
