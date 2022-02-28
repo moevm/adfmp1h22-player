@@ -4,6 +4,8 @@
     <string name="history_activity_name">History</string>
     <string name="saveTracks_activity_name">Save tracks</string>
     <string name="playback_history_activity_name">Playback history</string>
+    <string name="add_station_activity_name">Add station</string>
+    <string name="station_info_activity_name">Station info</string>
     <string name="maxTracks">Max stored tracks</string>
     <string name="saveTracks">Saved tracks directory</string>
     <string name="fab_add_station">Add station</string>

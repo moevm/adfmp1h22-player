@@ -18,10 +18,12 @@
             android:label="@string/history_activity_name"/>
         <activity
             android:name=".AddStationActivity"
-            android:exported="false" />
+            android:exported="false"
+            android:label="@string/add_station_activity_name"/>
         <activity
             android:name=".StationInfoActivity"
-            android:exported="false" />
+            android:exported="false"
+            android:label="@string/station_info_activity_name" />
         <activity
             android:name=".SaveTracksActivity"
             android:exported="false"
