@@ -142,11 +142,9 @@ class StationListFragment : Fragment(R.layout.fragment_station_list) {
                         true
                     }
                     R.id.station_list_item_info -> {
-                        Toast.makeText(context, "No Station Info activity yet",
-                                       Toast.LENGTH_LONG)
-                            .show()
-                        // TODO: actually navigate
+                        // TODO: actually pass selection
                         tracker.clearSelection()
+                        startActivity(Intent(context, StationInfoActivity::class.java))
                         true
                     }
                     else -> false
