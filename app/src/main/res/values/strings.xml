@@ -13,4 +13,11 @@
     <string name="savetracks_tooltip">Save tracks</string>
     <string name="stop_desc">Stop playing the current station</string>
     <string name="stop_tooltip">Stop playback</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="station_name">Station name</string>
+    <string name="station_home_page">Homepage</string>
+    <string name="station_country">Country</string>
+    <string name="station_file_format">Format</string>
+    <string name="station_url">URL</string>
 </resources>
