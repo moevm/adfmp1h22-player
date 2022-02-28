@@ -1,5 +1,6 @@
 package com.github.moevm.adfmp1h22_player
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import android.view.MotionEvent
@@ -9,10 +10,8 @@ import android.view.MenuItem
 import androidx.appcompat.view.ActionMode
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
-import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.selection.SelectionTracker
 import androidx.recyclerview.selection.ItemKeyProvider
-import androidx.recyclerview.selection.StableIdKeyProvider
 import androidx.recyclerview.selection.ItemDetailsLookup
 import androidx.recyclerview.selection.StorageStrategy
 import androidx.viewpager2.widget.ViewPager2
@@ -27,9 +26,7 @@ class StationListFragment : Fragment(R.layout.fragment_station_list) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         add_fab.setOnClickListener {
-            Toast.makeText(context, "No Add station activity yet",
-                           Toast.LENGTH_LONG)
-                .show()
+            startActivity(Intent(context, AddStationActivity::class.java))
         }
 
         val a = StationListAdapter { s: Station ->
