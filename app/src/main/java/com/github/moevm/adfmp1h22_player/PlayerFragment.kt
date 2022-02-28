@@ -12,13 +12,13 @@ class PlayerFragment : Fragment(R.layout.fragment_player) {
         STOPPED, PAUSED, PLAYING,
     }
 
-    private var state: PlaybackState = PlaybackState.PAUSED
+    private var state: PlaybackState = PlaybackState.STOPPED
 
     var onStopListener: (() -> Unit)? = null
+    var queryState: (() -> Boolean)? = null
 
-    fun setPlayingState(value: PlaybackState) {
-        state = value
-        when (value) {
+    fun updateUiState() {
+        when (state) {
             PlaybackState.STOPPED -> ib_playpause.run {
                 setImageResource(R.drawable.ic_play_64)
                 setEnabled(false)
@@ -31,6 +31,17 @@ class PlayerFragment : Fragment(R.layout.fragment_player) {
                 setImageResource(R.drawable.ic_pause_64)
                 setEnabled(true)
             }
+        }
+    }
+
+    fun setPlayingState(value: PlaybackState) {
+        if (value == state) {
+            return
+        }
+        state = value
+        updateUiState()
+        if (state == PlaybackState.STOPPED) {
+            onStopListener?.let { it() }
         }
     }
 
@@ -47,11 +58,18 @@ class PlayerFragment : Fragment(R.layout.fragment_player) {
                 else -> PlaybackState.PLAYING
             })
         }
-        setPlayingState(PlaybackState.PAUSED)
 
         ib_stop.setOnClickListener {
-            // TODO: set playback state to STOPPED
-            onStopListener?.let { it() }
+            setPlayingState(PlaybackState.STOPPED)
         }
+
+        updateUiState()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        val playing = queryState?.let { it() } ?: false
+        setPlayingState(if (playing) PlaybackState.PLAYING
+                        else PlaybackState.STOPPED)
     }
 }

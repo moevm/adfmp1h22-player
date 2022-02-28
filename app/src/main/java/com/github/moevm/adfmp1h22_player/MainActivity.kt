@@ -9,6 +9,7 @@ import android.os.Bundle
 import android.content.Intent
 import androidx.fragment.app.Fragment
 import androidx.viewpager2.adapter.FragmentStateAdapter
+import androidx.viewpager2.widget.ViewPager2
 import kotlinx.android.synthetic.main.activity_main.*
 
 import com.github.moevm.adfmp1h22_player.PlayerFragment
@@ -16,6 +17,9 @@ import com.github.moevm.adfmp1h22_player.StationListFragment
 
 
 class MainActivity : AppCompatActivity() {
+
+    private var current_station: Station? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -26,13 +30,38 @@ class MainActivity : AppCompatActivity() {
             override fun createFragment(pos: Int): Fragment = when (pos) {
                 0 -> PlayerFragment().also {
                     it.onStopListener = {
-                        pager.currentItem = 1
+                        setPlayingStation(null)
+                    }
+                    it.queryState = {
+                        current_station != null
                     }
                 }
-                1 -> StationListFragment()
+                1 -> StationListFragment().also {
+                    it.onSetStation = { s: Station ->
+                        setPlayingStation(s)
+                    }
+                }
                 else -> throw IllegalArgumentException("Invalid fragment index")
             }
         }
+
+        pager.registerOnPageChangeCallback(
+            object : ViewPager2.OnPageChangeCallback() {
+                override fun onPageSelected(pos: Int) {
+                    if (pos == 0) {
+                        if (current_station?.let {
+                                setTitle(it.name)
+                                false
+                            } ?: true) {
+                            setTitle(R.string.app_name)
+                        }
+                    } else {
+                        setTitle(R.string.app_name)
+                    }
+                }
+            }
+        )
+
         Log.d("LIFECYCLE", "creating main activity with $savedInstanceState")
         pager.setCurrentItem(savedInstanceState?.getInt("page") ?: 1, false)
     }
@@ -60,6 +89,15 @@ class MainActivity : AppCompatActivity() {
                 true
             }
             else -> super.onOptionsItemSelected(item)
+        }
+    }
+
+    fun setPlayingStation(s: Station?) {
+        current_station = s
+        if (s != null) {
+            pager.setCurrentItem(0)
+        } else {
+            pager.setCurrentItem(1)
         }
     }
 }

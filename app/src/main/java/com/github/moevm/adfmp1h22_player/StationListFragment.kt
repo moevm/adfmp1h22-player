@@ -20,6 +20,8 @@ import kotlinx.android.synthetic.main.fragment_station_list.*
 
 class StationListFragment : Fragment(R.layout.fragment_station_list) {
 
+    var onSetStation: ((Station) -> Unit)? = null
+
     var action_mode: ActionMode? = null
     lateinit var tracker: SelectionTracker<String>
 
@@ -30,10 +32,8 @@ class StationListFragment : Fragment(R.layout.fragment_station_list) {
                 .show()
         }
 
-        val a = StationListAdapter {
-            Toast.makeText(context, "Station: ${it.name}",
-                           Toast.LENGTH_SHORT)
-                .show()
+        val a = StationListAdapter { s: Station ->
+            onSetStation?.let { it(s) }
         }
 
         station_list.adapter = a
