@@ -16,7 +16,7 @@
             android:name=".AddStationActivity"
             android:exported="false" />
         <activity
-            android:name=".StationInfo"
+            android:name=".StationInfoActivity"
             android:exported="false" />
         <activity
             android:name=".SaveTracksActivity"
