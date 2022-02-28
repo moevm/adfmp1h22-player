@@ -1,7 +1,6 @@
 package com.github.moevm.adfmp1h22_player
 
 import android.graphics.Color
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -10,8 +9,8 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 
 
-class SavaTracksAdapter(private val tracks: List<Track>) :
-    RecyclerView.Adapter<SavaTracksAdapter.Holder>(),
+class SaveTracksAdapter(private val tracks: List<Track>) :
+    RecyclerView.Adapter<SaveTracksAdapter.Holder>(),
     View.OnClickListener
 {
 

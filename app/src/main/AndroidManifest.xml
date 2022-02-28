@@ -13,6 +13,10 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.RadioPlayer">
         <activity
+            android:name=".HistoryActivity"
+            android:exported="false"
+            android:label="@string/history_activity_name"/>
+        <activity
             android:name=".AddStationActivity"
             android:exported="false" />
         <activity
