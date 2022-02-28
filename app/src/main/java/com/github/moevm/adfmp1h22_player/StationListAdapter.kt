@@ -7,6 +7,7 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
+import androidx.recyclerview.selection.SelectionTracker
 // import kotlinx.android.synthetic.main.
 
 class StationListAdapter(private val onClick: (Station) -> Unit) :
@@ -29,17 +30,24 @@ class StationListAdapter(private val onClick: (Station) -> Unit) :
             }
         }
 
-        fun bind(station: Station) {
+        fun bind(station: Station, selected: Boolean) {
             currentStation = station
 
             tv_station_name.text = station.name
-            item.tooltipText = station.name
+            // item.tooltipText = station.name
+
+            item.setActivated(selected)
         }
+
+        val stationUuid: String
+            get () = currentStation?.changeuuid ?: ""
     }
+
+    var tracker: SelectionTracker<String>? = null
 
     override fun onCreateViewHolder(
         parent: ViewGroup,
-        viewType: Int
+        vieTwype: Int
     ): StationViewHolder {
         val view = LayoutInflater.from(parent.context)
             .inflate(R.layout.item_added_station, parent, false)
@@ -47,7 +55,10 @@ class StationListAdapter(private val onClick: (Station) -> Unit) :
     }
 
     override fun onBindViewHolder(holder: StationViewHolder, pos: Int) {
-        holder.bind(getItem(pos))
+        val item = getItem(pos)
+        val id = item.changeuuid
+        val issel = tracker?.isSelected(id) ?: false
+        holder.bind(item, issel)
     }
 }
 

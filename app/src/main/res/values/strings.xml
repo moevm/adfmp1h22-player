@@ -13,4 +13,9 @@
     <string name="savetracks_tooltip">Save tracks</string>
     <string name="stop_desc">Stop playing the current station</string>
     <string name="stop_tooltip">Stop playback</string>
+    <string name="station_list_item_delete">Delete station(s)</string>
+    <plurals name="station_list_item_selection">
+        <item quantity="one">%d station</item>
+        <item quantity="other">%d stations</item>
+    </plurals>
 </resources>
