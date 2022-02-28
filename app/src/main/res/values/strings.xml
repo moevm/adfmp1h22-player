@@ -19,4 +19,6 @@
         <item quantity="other">%d stations</item>
     </plurals>
     <string name="station_list_item_info">Station info"</string>
+    <string name="station_name">Station name</string>
+    <string name="founded_stations">Stations found</string>
 </resources>
