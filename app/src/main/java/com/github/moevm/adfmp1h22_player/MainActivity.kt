@@ -79,9 +79,7 @@ class MainActivity : AppCompatActivity() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             R.id.playback_history -> {
-                Toast.makeText(this, "No Playback history activity yet",
-                               Toast.LENGTH_LONG)
-                    .show()
+                startActivity(Intent(this, HistoryActivity::class.java))
                 true
             }
             R.id.settings -> {

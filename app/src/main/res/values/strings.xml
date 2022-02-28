@@ -1,6 +1,7 @@
 <resources>
     <string name="app_name">Radio Player</string>
     <string name="settings_activity_name">Settings</string>
+    <string name="history_activity_name">History</string>
     <string name="saveTracks_activity_name">Save tracks</string>
     <string name="playback_history_activity_name">Playback history</string>
     <string name="maxTracks">Max stored tracks</string>
