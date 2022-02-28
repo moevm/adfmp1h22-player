@@ -13,7 +13,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.RadioPlayer">
         <activity
-            android:name=".AddStationActivity"
+            android:name=".StationInfo"
             android:exported="false" />
         <activity
             android:name=".SaveTracksActivity"
