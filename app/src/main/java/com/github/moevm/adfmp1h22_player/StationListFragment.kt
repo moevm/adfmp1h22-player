@@ -106,6 +106,9 @@ class StationListFragment : Fragment(R.layout.fragment_station_list) {
                         sel.size()
                     )
                     it.setTitle(title)
+                    val ma_info = it.getMenu()
+                        .findItem(R.id.station_list_item_info)
+                    ma_info.setVisible(sel.size() == 1)
                 }
             }
         })
@@ -138,6 +141,14 @@ class StationListFragment : Fragment(R.layout.fragment_station_list) {
                                        Toast.LENGTH_SHORT)
                             .show()
                         // TODO: actually delete stuff
+                        tracker.clearSelection()
+                        true
+                    }
+                    R.id.station_list_item_info -> {
+                        Toast.makeText(context, "No Station Info activity yet",
+                                       Toast.LENGTH_LONG)
+                            .show()
+                        // TODO: actually navigate
                         tracker.clearSelection()
                         true
                     }
