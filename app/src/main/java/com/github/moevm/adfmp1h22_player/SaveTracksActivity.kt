@@ -1,7 +1,9 @@
 package com.github.moevm.adfmp1h22_player
 
+import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import androidx.recyclerview.widget.LinearLayoutManager
 import kotlinx.android.synthetic.main.activity_sava_tracks.*
 
 class SaveTracksActivity : AppCompatActivity() {
@@ -11,12 +13,20 @@ class SaveTracksActivity : AppCompatActivity() {
 
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
-        imageButton.setOnClickListener{
-            imageButton.visibility = android.view.View.GONE
-            imageButton2.visibility = android.view.View.VISIBLE
-
+        var tracksList = mutableListOf<Track>()
+//
+//        val progress = (getIntent().getStringExtra("progress")).toString().toInt();
+        val progress = 10
+        for(i in 0..progress){
+            val track : Track = Track(i,"Item${i}","ItemArtist${i}", false)
+            tracksList.add(i, track)
         }
 
+        var SaveTrackAdapter = SavaTracksAdapter(tracksList)
+
+        val layoutManager = LinearLayoutManager(this)
+        tracksListRV.layoutManager = layoutManager
+        tracksListRV.adapter = SaveTrackAdapter
     }
 
     override fun onSupportNavigateUp(): Boolean {

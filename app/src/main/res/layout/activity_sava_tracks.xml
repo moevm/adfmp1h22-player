@@ -6,27 +6,9 @@
     android:layout_height="match_parent"
     tools:context=".SaveTracksActivity">
 
-    <ImageButton
-        android:id="@+id/imageButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="4dp"
-        android:layout_marginTop="147dp"
-        android:minHeight="48dp"
-        android:src="@drawable/ic_download"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <ImageButton
-        android:id="@+id/imageButton2"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="4dp"
-        android:layout_marginTop="147dp"
-        android:minHeight="48dp"
-        android:src="@drawable/ic_done"
-        android:visibility="invisible"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/tracksListRV"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scrollbars="vertical"/>
 </androidx.constraintlayout.widget.ConstraintLayout>
