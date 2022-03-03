@@ -67,6 +67,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
         Log.d("LIFECYCLE", "saving main activity")
         outState.putInt("page", pager.currentItem)
     }
