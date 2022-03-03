@@ -16,7 +16,7 @@ class AddStationActivity : AppCompatActivity() {
 
         val progress = 10
         for (i in 0..progress) {
-            val station = Station("", "Station ${i}", "")
+            val station = Station("", "Station ${i}", "", "")
             stationList.add(i, station)
         }
 

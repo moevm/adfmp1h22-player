@@ -1,5 +1,12 @@
 package com.github.moevm.adfmp1h22_player
 
+import java.io.IOException
+import java.io.Reader
+import java.io.InputStreamReader
+
+import android.util.Log
+import android.util.JsonReader
+
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
@@ -15,7 +22,46 @@ import androidx.recyclerview.selection.ItemKeyProvider
 import androidx.recyclerview.selection.ItemDetailsLookup
 import androidx.recyclerview.selection.StorageStrategy
 import androidx.viewpager2.widget.ViewPager2
+
+import com.google.android.material.snackbar.Snackbar
+
 import kotlinx.android.synthetic.main.fragment_station_list.*
+
+// Throws IOException
+fun readStationList(r: JsonReader): List<Station> {
+    r.beginArray()
+    val l = mutableListOf<Station>()
+    while (r.hasNext()) {
+        r.beginObject()
+        var changeUuid: String? = null
+        var name: String? = null
+        var streamUrl: String? = null
+        var faviconUrl: String? = null
+        while (r.hasNext()) {
+            when (r.nextName()) {
+                "changeuuid" -> changeUuid = r.nextString()
+                "name" -> name = r.nextString()
+                "url" -> streamUrl = r.nextString()
+                "favicon" -> faviconUrl = r.nextString()
+                else -> r.skipValue()
+            }
+        }
+        r.endObject()
+        if (changeUuid != null
+            && name != null
+            && streamUrl != null
+            && faviconUrl != null) {
+            l.add(Station(
+                      changeUuid,
+                      name,
+                      streamUrl,
+                      faviconUrl,
+            ))
+        }
+    }
+    r.endArray()
+    return l
+}
 
 class StationListFragment : Fragment(R.layout.fragment_station_list) {
 
@@ -112,17 +158,22 @@ class StationListFragment : Fragment(R.layout.fragment_station_list) {
         a.tracker = tracker
 
         val l = mutableListOf(
-            Station("828a9ec6-9d30-40e9-8c76-fbded56fdc94", "Europa Plus", "http://liveam.tv/img/2494.jpg"),
-            Station("2f0c87d1-26e3-4201-a28f-c2e68da578f6", "Вести ФМ (Vesti FM)", ""),
-            Station("219fc935-26c5-11e8-91bf-52543be04c81", "Шансон Радио", "https://www.radiobells.com/stations/chanson.jpg"),
-            Station("299cfc26-0705-485e-a81a-572e0652d7a5", "ROCK FM", "https://lh3.googleusercontent.com/D3taObR7tfyhwDFY40VS8DIVri7iif5RuzI9C-mXxRwF41vGZ_dO_n6MWM57P-mZczFC=w300"),
-            Station("74ba2dcb-c6ad-405e-aa2c-d09226e73920", "Радио «Комсомольская Правда» | КП Россия", "https://www.kp.ru/favicon.ico"),
-            Station("352d202f-e753-47fb-aa94-5dd9230fce90", "Ретро FM", "http://retrofm.ru/favicon.ico"),
-            Station("c254c600-7e58-443f-9257-e130290e01c7", "Echo Moskva HD", "https://echo.msk.ru/i/icons/apple-icon-120x120.png"),
-            Station("fb02bc59-c985-4dce-af18-d3b40fcfe29b", "DFM RUSSIAN DANCE", ""),
-            Station("6b54b9a1-2001-11e8-a334-52543be04c81", "дорожное радио (Dorognoe Radio)", "https://dorognoe.ru/thumb/og_image_600x315/sharing_image/2016/ff/91/57cd63d58643c_sharind_dorognoe.jpg"),
-            Station("850a3029-7eab-4a61-bfa2-ebe72a3a245d", "Дискотека СССР", "https://cdn2.101.ru/vardata/modules/channel/image/c34932ae363a2b1386c0136d403a2274.png"),
+            Station("static:0", "Ultra (MP3 192)", "http://nashe1.hostingradio.ru/ultra-192.mp3", "https://radioultra.ru/favicons/apple-touch-icon.png"),
         )
+        if (! try {
+                val json = requireContext().getAssets().open("stations.json")
+                l.addAll(readStationList(JsonReader(InputStreamReader(json))))
+                true
+            } catch (e: IOException) {
+                false
+            } catch (e: IllegalStateException) {
+                false
+            }
+        ) {
+            Snackbar.make(view, "Failed to load stations.json",
+                          Snackbar.LENGTH_LONG)
+                .show()
+        }
         a.submitList(l)
     }
 
