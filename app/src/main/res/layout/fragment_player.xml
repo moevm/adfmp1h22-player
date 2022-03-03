@@ -9,35 +9,40 @@
 
     <ImageView
         android:id="@+id/iv_cover"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
         android:src="@drawable/ic_cover_placeholder_256"
-        app:layout_constraintBottom_toBottomOf="parent"
+        android:scaleType="fitCenter"
+        android:adjustViewBounds="true"
+        app:layout_constraintBottom_toTopOf="@id/layer"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.3" />
+        app:layout_constraintVertical_chainStyle="spread"
+        />
 
     <TextView
         android:id="@+id/tv_tracktitle"
+        style="@style/PlayerTrackTitleText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="32dp"
         android:text="Track"
-        style="@style/PlayerTrackTitleText"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/iv_cover" />
+        app:layout_constraintBottom_toTopOf="@id/tv_trackartist"
+        app:layout_constraintEnd_toEndOf="@id/layer"
+        app:layout_constraintStart_toStartOf="@id/layer"
+        app:layout_constraintTop_toTopOf="@id/layer"
+        app:layout_constraintVertical_chainStyle="packed" />
 
     <TextView
         android:id="@+id/tv_trackartist"
+        style="@style/PlayerTrackArtistText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Artist"
-        style="@style/PlayerTrackArtistText"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/tv_tracktitle" />
+        app:layout_constraintBottom_toBottomOf="@id/layer"
+        app:layout_constraintEnd_toEndOf="@id/layer"
+        app:layout_constraintStart_toStartOf="@id/layer"
+        app:layout_constraintTop_toBottomOf="@id/tv_tracktitle" />
 
     <ImageButton
         android:id="@+id/ib_playpause"
@@ -48,11 +53,10 @@
         android:tooltipText="@string/playpause_tooltip"
         android:src="@drawable/ic_play_64"
         android:background="?selectableItemBackgroundBorderless"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintBottom_toBottomOf="@id/btnlayer"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/tv_trackartist"
-        app:layout_constraintVertical_bias="0.3" />
+        app:layout_constraintTop_toTopOf="@id/btnlayer" />
 
     <ImageButton
         android:id="@+id/ib_savetracks"
@@ -83,5 +87,29 @@
         app:layout_constraintHorizontal_bias="0.25"
         app:layout_constraintStart_toEndOf="@+id/ib_playpause"
         app:layout_constraintTop_toTopOf="@+id/ib_playpause" />
+
+    <androidx.constraintlayout.helper.widget.Layer
+        android:id="@+id/layer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginVertical="40sp"
+        app:constraint_referenced_ids="tv_tracktitle,tv_trackartist"
+        app:layout_constraintBottom_toTopOf="@id/btnlayer"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/iv_cover"
+        />
+
+    <androidx.constraintlayout.helper.widget.Layer
+        android:id="@+id/btnlayer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginVertical="64dp"
+        app:constraint_referenced_ids="ib_savetracks,ib_stop,ib_playpause"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/layer"
+        />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
