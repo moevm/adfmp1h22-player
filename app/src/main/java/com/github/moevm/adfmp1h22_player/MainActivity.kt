@@ -12,13 +12,17 @@ import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
 import kotlinx.android.synthetic.main.activity_main.*
 
-import com.github.moevm.adfmp1h22_player.PlayerFragment
-import com.github.moevm.adfmp1h22_player.StationListFragment
+import android.content.ServiceConnection
+import android.content.ComponentName
+import android.os.IBinder
 
 
 class MainActivity : AppCompatActivity() {
 
     private var current_station: Station? = null
+
+    // TODO: fun setPlaybackState (pause/resume, stop)
+    // TODO: fun startPlayingStation (Station)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -33,8 +37,13 @@ class MainActivity : AppCompatActivity() {
                         setPlayingStation(null)
                     }
                     it.queryState = {
-                        current_station != null
+                        if (current_station != null) {
+                            PlaybackState.PLAYING
+                        } else {
+                            PlaybackState.STOPPED
+                        }
                     }
+                    // TODO: setState
                 }
                 1 -> StationListFragment().also {
                     it.onSetStation = { s: Station ->
@@ -66,6 +75,11 @@ class MainActivity : AppCompatActivity() {
         pager.setCurrentItem(savedInstanceState?.getInt("page") ?: 1, false)
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        doUnbind()
+    }
+
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         Log.d("LIFECYCLE", "saving main activity")
@@ -91,11 +105,64 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private var mServiceConnection: PlayerServiceConnection? = null
+    private var mServiceBinder: PlayerService.PlayerServiceBinder? = null
+
+    inner class PlayerServiceConnection(
+        private val action: (PlayerService) -> Unit
+    ) : ServiceConnection {
+        override fun onServiceConnected(n: ComponentName, s: IBinder) {
+            mServiceBinder = s as PlayerService.PlayerServiceBinder
+            action(s.service)
+        }
+
+        override fun onServiceDisconnected(n: ComponentName) {
+            mServiceBinder = null;
+        }
+    }
+
+    private fun withPlayerService(action: (PlayerService) -> Unit) {
+        val b = mServiceBinder
+        if (b == null) {
+            val i = Intent(this, PlayerService::class.java)
+            startForegroundService(i)
+
+            val c = PlayerServiceConnection(action)
+            mServiceConnection = c
+            bindService(i, c, 0)
+        } else {
+            action(b.service)
+        }
+    }
+
+    private fun doUnbind() {
+        mServiceConnection?.let {
+            unbindService(it)
+            mServiceConnection = null
+            mServiceBinder = null
+        }
+    }
+
     fun setPlayingStation(s: Station?) {
+        if ((s == null) == (current_station == null)) {
+            return
+        }
+
         current_station = s
         if (s != null) {
+
+            withPlayerService {
+                it.startPlayingStation(s)
+            }
+
             pager.setCurrentItem(0)
+
         } else {
+
+            withPlayerService {
+                it.stopPlayback()
+            }
+
             pager.setCurrentItem(1)
         }
     }

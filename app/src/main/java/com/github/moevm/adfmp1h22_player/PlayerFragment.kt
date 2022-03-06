@@ -8,17 +8,14 @@ import kotlinx.android.synthetic.main.fragment_player.*
 
 class PlayerFragment : Fragment(R.layout.fragment_player) {
 
-    enum class PlaybackState {
-        STOPPED, PAUSED, PLAYING,
-    }
-
-    private var state: PlaybackState = PlaybackState.STOPPED
+    private var mState: PlaybackState = PlaybackState.STOPPED
 
     var onStopListener: (() -> Unit)? = null
-    var queryState: (() -> Boolean)? = null
+    var queryState: (() -> PlaybackState)? = null
+    var setState: ((PlaybackState) -> Unit)? = null
 
     fun updateUiState() {
-        when (state) {
+        when (mState) {
             PlaybackState.STOPPED -> ib_playpause.run {
                 setImageResource(R.drawable.ic_play_64)
                 setEnabled(false)
@@ -35,12 +32,13 @@ class PlayerFragment : Fragment(R.layout.fragment_player) {
     }
 
     fun setPlayingState(value: PlaybackState) {
-        if (value == state) {
+        if (value == mState) {
             return
         }
-        state = value
+        mState = value
+        // TODO: setState
         updateUiState()
-        if (state == PlaybackState.STOPPED) {
+        if (mState == PlaybackState.STOPPED) {
             onStopListener?.let { it() }
         }
     }
@@ -53,7 +51,7 @@ class PlayerFragment : Fragment(R.layout.fragment_player) {
         }
 
         ib_playpause.setOnClickListener {
-            setPlayingState(when (state) {
+            setPlayingState(when (mState) {
                 PlaybackState.PLAYING -> PlaybackState.PAUSED
                 else -> PlaybackState.PLAYING
             })
@@ -68,8 +66,7 @@ class PlayerFragment : Fragment(R.layout.fragment_player) {
 
     override fun onResume() {
         super.onResume()
-        val playing = queryState?.let { it() } ?: false
-        setPlayingState(if (playing) PlaybackState.PLAYING
-                        else PlaybackState.STOPPED)
+        val state = queryState?.let { it() } ?: PlaybackState.STOPPED
+        setPlayingState(state)
     }
 }
