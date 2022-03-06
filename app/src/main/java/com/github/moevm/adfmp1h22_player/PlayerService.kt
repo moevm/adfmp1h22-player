@@ -1,5 +1,7 @@
 package com.github.moevm.adfmp1h22_player
 
+import android.util.Log
+
 import android.os.Build
 import android.app.NotificationManager
 import android.app.NotificationChannel
@@ -33,12 +35,12 @@ import android.app.Service
 // probably the gradle dependency string should be
 // “org.eclipse.jetty:jetty-client:11.0.8”
 
-class PlayerService : Service() {
+private const val CMD_START_PLAYING_STATION = 0
+private const val CMD_STOP_PLAYBACK = 1
+// val CMD_PAUSE_PLAYBACK = 2
+// val CMD_RESUME_PLAYBACK = 3
 
-    val CMD_START_PLAYING_STATION = 0
-    val CMD_STOP_PLAYBACK = 1
-    // val CMD_PAUSE_PLAYBACK = 2
-    // val CMD_RESUME_PLAYBACK = 3
+class PlayerService : Service() {
 
     val NOTIF_CHANNEL_ID = "main"
     val NOTIFY_ID = 1
@@ -52,9 +54,7 @@ class PlayerService : Service() {
         // TODO #1
         // 1. Set up Jetty
         // 2. Set up a connection
-        // 3. Log start message
-        // 4. Log stopPlayback message
-        // 5. Log bitrate, other headers
+        // 3. Log bitrate, other headers
 
         // TODO #2
         // 1. Receive segments
@@ -76,8 +76,15 @@ class PlayerService : Service() {
 
             mLooper = Looper.myLooper()!!
             mHandler = Handler(mLooper) { msg: Message ->
-                when {
-                    // TODO: process message
+                when (msg.what) {
+                    CMD_START_PLAYING_STATION -> {
+                        Log.d("APPDEBUG", "start ${msg.obj as String}")
+                        true
+                    }
+                    CMD_STOP_PLAYBACK -> {
+                        Log.d("APPDEBUG", "stop")
+                        true
+                    }
                     else -> false
                 }
             }
@@ -87,18 +94,25 @@ class PlayerService : Service() {
     }
 
     fun startPlayingStation(s: Station) {
-        // TODO: send message
+        mThread?.let {
+            it.mHandler.obtainMessage(
+                CMD_START_PLAYING_STATION,
+                s.streamUrl,
+            ).sendToTarget()
+        }
     }
 
     fun stopPlayback() {
-        // TODO: send message
+        mThread?.let {
+            it.mHandler.obtainMessage(CMD_STOP_PLAYBACK)
+                .sendToTarget()
+        }
         stopSelf()
     }
 
     inner class PlayerServiceBinder : Binder() {
         val service: PlayerService
             get () = this@PlayerService
-        // FIXME: we may have to make it a simple Java-like class
     }
 
     override fun onStartCommand(intent: Intent, flags: Int, id: Int): Int {
@@ -114,7 +128,7 @@ class PlayerService : Service() {
             val chan = NotificationChannel(
                 NOTIF_CHANNEL_ID,
                 "Default",
-                NotificationManager.IMPORTANCE_HIGH
+                NotificationManager.IMPORTANCE_DEFAULT
             )
             nm.createNotificationChannel(chan)
             NotificationCompat.Builder(this, chan.id)
@@ -123,7 +137,10 @@ class PlayerService : Service() {
         }
 
         val notif = builder
+            .setSmallIcon(R.drawable.ic_note)
             .setContentTitle("Radio Player")
+            .setContentText("Service is running")
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .build()
 
         return notif
@@ -144,7 +161,5 @@ class PlayerService : Service() {
             it.join()
             mThread = null
         }
-
-        // FIXME: remove notification?
     }
 }

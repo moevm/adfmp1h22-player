@@ -144,7 +144,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun setPlayingStation(s: Station?) {
-        if ((s == null) == (current_station == null)) {
+        if (s == current_station) {
             return
         }
 
