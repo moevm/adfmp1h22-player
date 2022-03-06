@@ -1,9 +1,8 @@
 package com.github.moevm.adfmp1h22_player
 
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.graphics.Color
-import android.util.Log
+import android.graphics.drawable.Drawable
+import android.util.DisplayMetrics
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -11,7 +10,6 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.squareup.picasso.Picasso
-
 
 class AddStationAdapter(private val stations: List<Station>) :
     RecyclerView.Adapter<AddStationAdapter.Holder>()
@@ -30,8 +28,13 @@ class AddStationAdapter(private val stations: List<Station>) :
 
         val imageURL = station.faviconUrl
         if(imageURL != ""){
-            Picasso.get().load(imageURL).error(R.drawable.ic_station_placeholder_54).into(holder.favicon)
+            Picasso.get()
+                .load(imageURL)
+                .error(R.drawable.ic_station_placeholder_54)
+                .into(holder.favicon)
         }
+
+
 
     }
 

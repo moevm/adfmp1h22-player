@@ -12,10 +12,6 @@ import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
 import kotlinx.android.synthetic.main.activity_main.*
 
-import com.github.moevm.adfmp1h22_player.PlayerFragment
-import com.github.moevm.adfmp1h22_player.StationListFragment
-
-
 class MainActivity : AppCompatActivity() {
 
     private var current_station: Station? = null
@@ -64,6 +60,8 @@ class MainActivity : AppCompatActivity() {
 
         Log.d("LIFECYCLE", "creating main activity with $savedInstanceState")
         pager.setCurrentItem(savedInstanceState?.getInt("page") ?: 1, false)
+
+
     }
 
     override fun onSaveInstanceState(outState: Bundle) {

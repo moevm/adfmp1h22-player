@@ -2,6 +2,7 @@ package com.github.moevm.adfmp1h22_player
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.view.MotionEvent
 import android.widget.Toast
@@ -16,17 +17,59 @@ import androidx.recyclerview.selection.ItemDetailsLookup
 import androidx.recyclerview.selection.StorageStrategy
 import androidx.viewpager2.widget.ViewPager2
 import kotlinx.android.synthetic.main.fragment_station_list.*
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
 
 class StationListFragment : Fragment(R.layout.fragment_station_list) {
 
     var onSetStation: ((Station) -> Unit)? = null
-
     var action_mode: ActionMode? = null
     lateinit var tracker: SelectionTracker<String>
 
+    var stationList = ArrayList<Station>()
+    fun updateAddedList(){
+
+        val apiInterface = APIClient().getClient()?.create(APIInterface::class.java)
+
+        GlobalScope.launch {
+            val call: Call<AddStationList?>? = apiInterface!!.AddStationListResources()
+            call?.enqueue(object  : Callback<AddStationList?> {
+                override fun onResponse(
+                    call: Call<AddStationList?>,
+                    response: Response<AddStationList?>
+                ) {
+                    Log.d("TAG", response.code().toString())
+                    val resource: AddStationList? = response.body()
+                    if(resource != null){
+                        val progress = resource.size - 1
+                        for (i in 0..progress) {
+                            val station = Station(resource[i].changeuuid.toString(), resource[i].name.toString(), resource[i].favicon.toString())
+                            stationList.add(i, station)
+                        }
+                    }
+                    else{
+                        Log.d("TAG", "Error in StationListFragmrnt.kt")
+                    }
+
+                }
+
+                override fun onFailure(call: Call<AddStationList?>, t: Throwable) {
+                    call.cancel()
+                }
+
+            })
+        }
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        updateAddedList()
         add_fab.setOnClickListener {
-            startActivity(Intent(context, AddStationActivity::class.java))
+            val intent = Intent(context, AddStationActivity::class.java)
+            intent.putParcelableArrayListExtra("stationList", stationList)
+            startActivity(intent)
         }
 
         val a = StationListAdapter { s: Station ->

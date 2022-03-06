@@ -8,7 +8,6 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.selection.SelectionTracker
-// import kotlinx.android.synthetic.main.
 
 class StationListAdapter(private val onClick: (Station) -> Unit) :
     ListAdapter<Station, StationListAdapter.StationViewHolder>(DiffStations) {

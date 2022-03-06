@@ -1,5 +1,11 @@
 package com.github.moevm.adfmp1h22_player
 
-data class Station(val changeuuid: String,
-                   val name: String,
-                   val faviconUrl: String)
+import android.os.Parcelable
+import kotlinx.android.parcel.Parcelize
+
+@Parcelize
+data class Station(
+    val changeuuid: String,
+    val name: String,
+    val faviconUrl: String
+    ): Parcelable
