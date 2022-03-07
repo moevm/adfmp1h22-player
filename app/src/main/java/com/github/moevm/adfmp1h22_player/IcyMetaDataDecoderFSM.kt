@@ -11,7 +11,7 @@ class IcyMetaDataDecoderFSM(
 ) : DecoderFSM {
 
     interface Callback {
-        // TODO: onPayload
+        fun onPayload(c: ByteBuffer)
         fun onMetaData(s: String)
     }
 
@@ -25,19 +25,19 @@ class IcyMetaDataDecoderFSM(
 
     fun makeMetaData(b: ByteBuffer): String {
         return b.array()
-            .takeWhile { 0 != it.compareTo(0) }
+            .takeWhile { it != 0.toByte() }
             .toByteArray()
             .toString(Charsets.UTF_8)
     }
 
     override fun step(c: ByteBuffer) {
         while (c.hasRemaining()) {
-            Log.d("APPDEBUG", "state ${metastt}, rem ${c.remaining()}")
+            Log.d("APPDEBUG", "icy state ${metastt}, rem ${c.remaining()}")
             when (metastt) {
                 State.PAYLOAD -> {
                     val n = min(metaint - metactr, c.remaining())
                     metactr += n
-                    // TODO: step nested fsm here instead of skipping
+                    cb.onPayload(c.slice().limit(n) as ByteBuffer)
                     c.position(c.position() + n)
                     if (metactr == metaint) {
                         metactr = 0
@@ -68,6 +68,6 @@ class IcyMetaDataDecoderFSM(
                 }
             }
         }
-        Log.d("APPDEBUG", "fsm done")
+        Log.d("APPDEBUG", "icy done")
     }
 }

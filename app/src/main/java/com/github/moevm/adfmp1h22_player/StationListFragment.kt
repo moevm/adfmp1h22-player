@@ -159,6 +159,7 @@ class StationListFragment : Fragment(R.layout.fragment_station_list) {
 
         val l = mutableListOf(
             Station("static:0", "Ultra (MP3 192)", "http://nashe1.hostingradio.ru/ultra-192.mp3", "https://radioultra.ru/favicons/apple-touch-icon.png"),
+            Station("static:1", "192.168.1.56:8000/stream.mp3", "http://192.168.1.56:8000/stream.mp3", ""),
         )
         if (! try {
                 val json = requireContext().getAssets().open("stations.json")

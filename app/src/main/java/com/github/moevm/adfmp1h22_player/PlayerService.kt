@@ -3,7 +3,8 @@ package com.github.moevm.adfmp1h22_player
 import android.util.Log
 
 import org.eclipse.jetty.client.HttpClient
-import java.lang.Error
+import java.lang.Exception
+import java.nio.ByteBuffer
 
 import android.os.Build
 import android.app.NotificationManager
@@ -32,12 +33,6 @@ import android.app.Service
 //   - MediaCodec
 //   - AudioTrack (basically copy the docs)
 
-// NOTE
-// HTTP: Use Jetty.
-// https://mvnrepository.com/artifact/org.eclipse.jetty/jetty-client
-// probably the gradle dependency string should be
-// “org.eclipse.jetty:jetty-client:11.0.8”
-
 private const val CMD_START_PLAYING_STATION = 0
 private const val CMD_STOP_PLAYBACK = 1
 // val CMD_PAUSE_PLAYBACK = 2
@@ -53,11 +48,6 @@ class PlayerService : Service() {
 
     class PlayerThread : HandlerThread("PlayerThread") {
 
-        // TODO #3
-        // 1. Parse MP3 headers
-        // 2. Skip MP3 data
-        // 3. Log header info
-
         // TODO #4
         // 1. Set up a MediaCodec
         // 2. Set up an AudioTrack
@@ -66,10 +56,12 @@ class PlayerService : Service() {
         lateinit var hc: HttpClient
 
         var metaint: Int? = null
+        var content_type: String? = null
         var decoder: DecoderFSM? = null
 
         fun reset() {
             metaint = null
+            content_type = null
             decoder = null
         }
 
@@ -86,8 +78,10 @@ class PlayerService : Service() {
                             when (f.getLowerCaseName()) {
                                 "icy-metaint" ->
                                     metaint = v.toIntOrNull()
-                                "content-type" ->
+                                "content-type" -> {
+                                    content_type = v
                                     Log.d("APPDEBUG", "content-type $v")
+                                }
                                 "icy-br" ->
                                     Log.d("APPDEBUG", "bitrate $v")
                                 "icy-name" ->
@@ -98,24 +92,69 @@ class PlayerService : Service() {
                             true
                         }
                         .onResponseHeaders { r ->
-                            val mi = metaint
-                            if (mi == null) {
-                                r.abort(Error("Missing icy-metaint header"))
-                                return@onResponseHeaders
-                            }
-                            decoder = IcyMetaDataDecoderFSM(
-                                mi, object : IcyMetaDataDecoderFSM.Callback {
-                                    override fun onMetaData(s: String) {
-                                        Log.d("APPDEBUG", "metadata: $s")
+                            var fsm: DecoderFSM = when (content_type) {
+                                "audio/mpeg" -> Mp3HeaderDecoderFSM(
+                                    object : Mp3HeaderDecoderFSM.Callback {
+                                        override fun onFormat(
+                                            br_kbps: Int, freq_hz: Int,
+                                            mode: Mp3HeaderDecoderFSM.Mode,
+                                        ) {
+                                            Log.d("APPDEBUG", "mp3 fmt $br_kbps $freq_hz $mode")
+                                        }
+
+                                        override fun onPayload(c: ByteBuffer) {
+                                            val n = c.remaining()
+                                            Log.d("APPDEBUG", "mp3 payload $n")
+                                        }
+
+                                        override fun onFrameDone() {
+                                            Log.d("APPDEBUG", "mp3 frame done")
+                                        }
                                     }
+                                )
+                                else -> {
+                                    Log.d("APPDEBUG", "aborting")
+                                    r.abort(Exception("Unsupported format $content_type"))
+                                    return@onResponseHeaders
                                 }
-                            )
+                            }
+
+                            metaint?.let {
+                                val fsm1 = fsm
+                                fsm = IcyMetaDataDecoderFSM(
+                                    it, object : IcyMetaDataDecoderFSM.Callback {
+                                        override fun onPayload(c: ByteBuffer) {
+                                            Log.d("APPDEBUG", "icy -> mp3")
+                                            fsm1.step(c)
+                                        }
+
+                                        override fun onMetaData(s: String) {
+                                            Log.d("APPDEBUG", "metadata: $s")
+                                        }
+                                    }
+                                )
+                            }
+
+                            decoder = fsm
                         }
                         .onResponseContent { _, c ->
                             decoder?.step(c)
                         }
-                        .send {
+                        .send { r ->
                             Log.d("APPDEBUG", "done")
+                            if (r.isFailed()) {
+                                try {
+                                Log.d("APPDEBUG", "failed")
+                                r.getRequestFailure()?.let {
+                                    Log.d("APPDEBUG", "req  fail: ${it.toString()}")
+                                }
+                                r.getResponseFailure()?.let {
+                                    Log.d("APPDEBUG", "resp fail: ${it.toString()}")
+                                }
+                                } catch (e: Exception) {
+                                    Log.d("APPDEBUG", "exception in result")
+                                }
+                            }
                         }
                     true
                 }
