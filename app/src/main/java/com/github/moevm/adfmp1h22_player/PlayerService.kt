@@ -2,13 +2,15 @@ package com.github.moevm.adfmp1h22_player
 
 import android.util.Log
 
+import org.eclipse.jetty.client.HttpClient
+
 import android.os.Build
 import android.app.NotificationManager
 import android.app.NotificationChannel
 import androidx.core.app.NotificationCompat
 import android.app.Notification
 
-import java.lang.Thread
+import android.os.HandlerThread
 import android.os.Handler
 import android.os.Looper
 import android.os.Message
@@ -46,15 +48,10 @@ class PlayerService : Service() {
     val NOTIFY_ID = 1
 
     var mThread: PlayerThread? = null
+    var mHandler: Handler? = null
 
-    class PlayerThread : Thread() {
-        lateinit var mHandler: Handler
-        lateinit var mLooper: Looper
-
-        // TODO #1
-        // 1. Set up Jetty
-        // 2. Set up a connection
-        // 3. Log bitrate, other headers
+    class PlayerThread : HandlerThread("Player Thread") {
+        lateinit var hc: HttpClient
 
         // TODO #2
         // 1. Receive segments
@@ -71,31 +68,61 @@ class PlayerService : Service() {
         // 2. Set up an AudioTrack
         // 3. Feed frames through the thing
 
-        override fun run() {
-            Looper.prepare()
-
-            mLooper = Looper.myLooper()!!
-            mHandler = Handler(mLooper) { msg: Message ->
-                when (msg.what) {
-                    CMD_START_PLAYING_STATION -> {
-                        Log.d("APPDEBUG", "start ${msg.obj as String}")
-                        true
-                    }
-                    CMD_STOP_PLAYBACK -> {
-                        Log.d("APPDEBUG", "stop")
-                        true
-                    }
-                    else -> false
+        fun handleMessage(msg: Message): Boolean {
+            return when (msg.what) {
+                CMD_START_PLAYING_STATION -> {
+                    val url = msg.obj as String
+                    Log.d("APPDEBUG", "start $url")
+                    hc.newRequest(url)
+                        .header("icy-metadata", "1")
+                        .onResponseHeader { _, f ->
+                            val v = f.getValue()
+                            when (f.getLowerCaseName()) {
+                                "icy-metaint" ->
+                                    Log.d("APPDEBUG", "metaint $v")
+                                "content-type" ->
+                                    Log.d("APPDEBUG", "content-type $v")
+                                "icy-br" ->
+                                    Log.d("APPDEBUG", "bitrate $v")
+                                "icy-name" ->
+                                    Log.d("APPDEBUG", "station name $v")
+                                "server" ->
+                                    Log.d("APPDEBUG", "station srv $v")
+                            }
+                            true
+                        }
+                        .onResponseContent { _, c ->
+                            val n = c.capacity()
+                            Log.d("APPDEBUG", "recv $n")
+                        }
+                        .send {
+                            Log.d("APPDEBUG", "done")
+                        }
+                    true
                 }
+                CMD_STOP_PLAYBACK -> {
+                    Log.d("APPDEBUG", "stop")
+                    true
+                }
+                else -> false
             }
+        }
 
-            Looper.loop()
+        override fun run() {
+            Log.d("APPDEBUG", "thread starting")
+            hc = HttpClient()
+            hc.start()
+            Log.d("APPDEBUG", "looper starting")
+            super.run()
+            Log.d("APPDEBUG", "looper exited")
+            hc.stop()
+            Log.d("APPDEBUG", "thread stopping")
         }
     }
 
     fun startPlayingStation(s: Station) {
-        mThread?.let {
-            it.mHandler.obtainMessage(
+        mHandler?.let {
+            it.obtainMessage(
                 CMD_START_PLAYING_STATION,
                 s.streamUrl,
             ).sendToTarget()
@@ -103,8 +130,8 @@ class PlayerService : Service() {
     }
 
     fun stopPlayback() {
-        mThread?.let {
-            it.mHandler.obtainMessage(CMD_STOP_PLAYBACK)
+        mHandler?.let {
+            it.obtainMessage(CMD_STOP_PLAYBACK)
                 .sendToTarget()
         }
         stopSelf()
@@ -149,6 +176,7 @@ class PlayerService : Service() {
     override fun onCreate() {
         mThread = PlayerThread().also {
             it.start()
+            mHandler = Handler(it.looper, it::handleMessage)
         }
 
         val notif = makeNotification()
@@ -157,7 +185,7 @@ class PlayerService : Service() {
 
     override fun onDestroy() {
         mThread?.let {
-            it.mLooper.quitSafely()
+            it.looper.quitSafely()
             it.join()
             mThread = null
         }
