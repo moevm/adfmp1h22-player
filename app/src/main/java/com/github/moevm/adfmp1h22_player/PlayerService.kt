@@ -46,7 +46,9 @@ class PlayerService : Service() {
     var mThread: PlayerThread? = null
     var mHandler: Handler? = null
 
-    class PlayerThread : HandlerThread("PlayerThread") {
+    class PlayerThread(
+        private val userAgent: String
+    ) : HandlerThread("PlayerThread") {
 
         // TODO #4
         // 1. Set up a MediaCodec
@@ -73,6 +75,7 @@ class PlayerService : Service() {
                     Log.d("APPDEBUG", "start $url")
                     hc.newRequest(url)
                         .header("icy-metadata", "1")
+                        .agent(userAgent)
                         .onResponseHeader { _, f ->
                             val v = f.getValue()
                             when (f.getLowerCaseName()) {
@@ -232,7 +235,7 @@ class PlayerService : Service() {
     }
 
     override fun onCreate() {
-        mThread = PlayerThread().also {
+        mThread = PlayerThread(resources.getString(R.string.user_agent)).also {
             it.start()
             mHandler = Handler(it.looper, it::handleMessage)
         }
