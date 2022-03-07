@@ -4,8 +4,6 @@ import android.util.Log
 
 import org.eclipse.jetty.client.HttpClient
 import java.lang.Error
-import java.nio.ByteBuffer
-import kotlin.math.min
 
 import android.os.Build
 import android.app.NotificationManager
@@ -53,74 +51,7 @@ class PlayerService : Service() {
     var mThread: PlayerThread? = null
     var mHandler: Handler? = null
 
-    class PlayerThread : HandlerThread("Player Thread") {
-
-        class MetaDataFSM(
-            val metaint: Int,
-            val cb: Callback,
-        ) {
-            interface Callback {
-                // TODO: onPayload
-                fun onMetaData(s: String)
-            }
-
-            enum class State {
-                PAYLOAD, SIZE, METADATA,
-            }
-
-            private var metastt: State = State.PAYLOAD
-            private var metactr: Int = 0
-            private var metabuf: ByteBuffer? = null
-
-            fun makeMetaData(b: ByteBuffer): String {
-                return b.array()
-                    .takeWhile { 0 != it.compareTo(0) }
-                    .toList()
-                    .toByteArray()
-                    .toString(Charsets.UTF_8)
-            }
-
-            fun step(c: ByteBuffer) {
-                while (c.hasRemaining()) {
-                    Log.d("APPDEBUG", "state ${metastt}, rem ${c.remaining()}")
-                    when (metastt) {
-                        State.PAYLOAD -> {
-                            val n = min(metaint - metactr, c.remaining())
-                            metactr += n
-                            // TODO: step nested fsm here instead of skipping
-                            c.position(c.position() + n)
-                            if (metactr == metaint) {
-                                metactr = 0
-                                metastt = State.SIZE
-                            }
-                        }
-                        State.SIZE -> {
-                            val sz = 16 * c.get()
-                            if (sz > 0) {
-                                metabuf = ByteBuffer.allocate(sz)
-                                metastt = State.METADATA
-                            } else {
-                                metastt = State.PAYLOAD
-                            }
-                        }
-                        State.METADATA -> {
-                            metabuf!!.let {
-                                val n = min(it.remaining(), c.remaining())
-                                it.put(c.slice().limit(n) as ByteBuffer)
-                                c.position(c.position() + n)
-                                if (!it.hasRemaining()) {
-                                    val s = makeMetaData(it)
-                                    cb.onMetaData(s)
-                                    metabuf = null
-                                    metastt = State.PAYLOAD
-                                }
-                            }
-                        }
-                    }
-                }
-                Log.d("APPDEBUG", "fsm done")
-            }
-        }
+    class PlayerThread : HandlerThread("PlayerThread") {
 
         // TODO #3
         // 1. Parse MP3 headers
@@ -135,11 +66,11 @@ class PlayerService : Service() {
         lateinit var hc: HttpClient
 
         var metaint: Int? = null
-        var metafsm: MetaDataFSM? = null
+        var decoder: DecoderFSM? = null
 
         fun reset() {
             metaint = null
-            metafsm = null
+            decoder = null
         }
 
         fun handleMessage(msg: Message): Boolean {
@@ -172,14 +103,16 @@ class PlayerService : Service() {
                                 r.abort(Error("Missing icy-metaint header"))
                                 return@onResponseHeaders
                             }
-                            metafsm = MetaDataFSM(mi, object : MetaDataFSM.Callback {
-                                override fun onMetaData(s: String) {
-                                    Log.d("APPDEBUG", "metadata: $s")
+                            decoder = IcyMetaDataDecoderFSM(
+                                mi, object : IcyMetaDataDecoderFSM.Callback {
+                                    override fun onMetaData(s: String) {
+                                        Log.d("APPDEBUG", "metadata: $s")
+                                    }
                                 }
-                            })
+                            )
                         }
                         .onResponseContent { _, c ->
-                            metafsm?.step(c)
+                            decoder?.step(c)
                         }
                         .send {
                             Log.d("APPDEBUG", "done")
