@@ -30,7 +30,12 @@ class Mp3HeaderDecoderFSM(
 ) : DecoderFSM {
 
     enum class Mode {
-        STEREO, JOINT_STEREO, DUAL_STEREO, MONO,
+        STEREO, JOINT_STEREO, DUAL_STEREO, MONO;
+
+        fun channelsCount() = when (this) {
+            STEREO, JOINT_STEREO, DUAL_STEREO -> 2
+            MONO -> 1
+        }
     }
 
     interface Callback {
@@ -83,7 +88,7 @@ class Mp3HeaderDecoderFSM(
 
     override fun step(c: ByteBuffer) {
         while (c.hasRemaining()) {
-            Log.d("APPDEBUG", "mp3 state ${stt}, rem ${c.remaining()}")
+            // Log.d("APPDEBUG", "mp3 state ${stt}, rem ${c.remaining()}")
             when (stt) {
                 State.HEADER -> {
                     val b = c.get()
@@ -142,7 +147,7 @@ class Mp3HeaderDecoderFSM(
                 }
             }
         }
-        Log.d("APPDEBUG", "mp3 done")
+        // Log.d("APPDEBUG", "mp3 done")
     }
 
 }

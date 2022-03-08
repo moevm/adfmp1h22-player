@@ -32,7 +32,7 @@ class IcyMetaDataDecoderFSM(
 
     override fun step(c: ByteBuffer) {
         while (c.hasRemaining()) {
-            Log.d("APPDEBUG", "icy state ${metastt}, rem ${c.remaining()}")
+            // Log.d("APPDEBUG", "icy state ${metastt}, rem ${c.remaining()}")
             when (metastt) {
                 State.PAYLOAD -> {
                     val n = min(metaint - metactr, c.remaining())
@@ -68,6 +68,6 @@ class IcyMetaDataDecoderFSM(
                 }
             }
         }
-        Log.d("APPDEBUG", "icy done")
+        // Log.d("APPDEBUG", "icy done")
     }
 }
