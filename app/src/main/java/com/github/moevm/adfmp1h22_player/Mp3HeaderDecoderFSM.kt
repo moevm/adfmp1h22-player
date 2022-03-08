@@ -39,7 +39,7 @@ class Mp3HeaderDecoderFSM(
     }
 
     interface Callback {
-        fun onFormat(br_kbps: Int, freq_hz: Int, mode: Mode)
+        fun onFormat(frame_len: Int, freq_hz: Int, mode: Mode)
         fun onPayload(c: ByteBuffer)
         fun onFrameDone()
     }
@@ -87,6 +87,7 @@ class Mp3HeaderDecoderFSM(
     }
 
     override fun step(c: ByteBuffer) {
+        // Log.d("BUFFER", "mp3 step")
         while (c.hasRemaining()) {
             // Log.d("APPDEBUG", "mp3 state ${stt}, rem ${c.remaining()}")
             when (stt) {
@@ -100,16 +101,20 @@ class Mp3HeaderDecoderFSM(
                         else -> false // should be unreachable
                     }
                     hdr.put(4 - rem, b)
+                    // Log.d("BUFFER", "mp3 p " + hdr.array().toList().toString())
                     if (!valid) {
                         stt = State.RESYNC
                         rem = 2
                         continue
                     }
                     if (--rem == 0) {
-                        cb.onFormat(br_kbps!!, freq_hz!!, mode!!)
+                        val fl = calcFrameLength()
+                        // Log.d("BUFFER", "mp3 f " + hdr.array().toList().toString())
+                        cb.onFormat(fl, freq_hz!!, mode!!)
+                        // Log.d("BUFFER", "mp3 s " + hdr.array().toList().toString())
                         cb.onPayload(hdr.slice())
                         stt = State.PAYLOAD
-                        rem = calcFrameLength() - 4
+                        rem = fl - 4
                     }
                 }
                 State.PAYLOAD -> {
