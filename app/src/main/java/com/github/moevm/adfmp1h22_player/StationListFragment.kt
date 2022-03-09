@@ -36,6 +36,7 @@ class StationListFragment : Fragment(R.layout.fragment_station_list) {
 
         GlobalScope.launch {
             val call: Call<AddStationList?>? = apiInterface!!.AddStationListResources()
+            Log.d("TAG", call?.request()?.headers.toString())
             call?.enqueue(object  : Callback<AddStationList?> {
                 override fun onResponse(
                     call: Call<AddStationList?>,

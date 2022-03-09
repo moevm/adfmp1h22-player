@@ -4,6 +4,7 @@ import retrofit2.Call
 import retrofit2.http.GET
 
 interface APIInterface {
+//    @GET("json/stations")
     @GET("json/stations/byname/jazz")
     fun AddStationListResources(): Call<AddStationList?>?
 }
