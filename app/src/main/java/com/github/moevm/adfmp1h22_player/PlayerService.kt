@@ -39,6 +39,7 @@ class PlayerService : Service() {
         val CMD_STOP_PLAYBACK = 1
         // val CMD_PAUSE_PLAYBACK = 2
         // val CMD_RESUME_PLAYBACK = 3
+        val CMD_DEBUG_INFO = 10
 
         val TAG = "PlayerService"
         val NOTIF_CHANNEL_ID = "main"
@@ -373,6 +374,10 @@ class PlayerService : Service() {
 
                     true
                 }
+                CMD_DEBUG_INFO -> {
+                    Log.d(TAG, "sizes: bqueue:${bqueue.size} freelist:${freelist.size}")
+                    true
+                }
                 else -> false
             }
         }
@@ -401,6 +406,13 @@ class PlayerService : Service() {
                 .sendToTarget()
         }
         stopSelf()
+    }
+
+    fun logDebugInfo() {
+        mHandler?.let {
+            it.obtainMessage(CMD_DEBUG_INFO)
+                .sendToTarget()
+        }
     }
 
     inner class PlayerServiceBinder : Binder() {

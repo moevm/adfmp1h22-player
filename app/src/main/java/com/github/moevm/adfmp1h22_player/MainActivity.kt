@@ -101,6 +101,12 @@ class MainActivity : AppCompatActivity() {
                 startActivity(Intent(this, SettingsActivity::class.java))
                 true
             }
+            R.id.debug_info -> {
+                mServiceBinder?.let {
+                    it.service.logDebugInfo()
+                }
+                true
+            }
             else -> super.onOptionsItemSelected(item)
         }
     }
