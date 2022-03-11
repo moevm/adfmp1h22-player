@@ -3,7 +3,7 @@ package com.github.moevm.adfmp1h22_player
 import android.util.Log
 import java.lang.Thread
 
-import java.util.LinkedList
+import java.util.concurrent.ConcurrentLinkedQueue
 import android.media.MediaCodec
 import android.media.MediaFormat
 import android.media.AudioTrack
@@ -63,8 +63,8 @@ class PlayerService : Service() {
         var content_type: String? = null
         var decoder: DecoderFSM? = null
 
-        val bqueue = LinkedList<ByteBuffer>()
-        val freelist = LinkedList<ByteBuffer>()
+        val bqueue = ConcurrentLinkedQueue<ByteBuffer>()
+        val freelist = ConcurrentLinkedQueue<ByteBuffer>()
         var current_buffer: ByteBuffer? = null
 
         var decoder_codec: MediaCodec? = null
@@ -154,12 +154,14 @@ class PlayerService : Service() {
 
                                 buf.clear()
 
-                                if (!bqueue.isEmpty()) {
-                                    val inb = bqueue.removeFirst()
+                                val inb = bqueue.poll()
+                                if (inb != null) {
                                     if (inb.remaining() <= buf.remaining()) {
                                         buf.put(inb)
                                         inb.clear()
-                                        freelist.addLast(inb)
+                                        freelist.add(inb)
+                                    } else {
+                                        Log.w(TAG, "onIBA: MediaCodec buffer too small")
                                     }
                                 }
 
@@ -245,80 +247,59 @@ class PlayerService : Service() {
                                     frame_len: Int, freq_hz: Int,
                                     mode: Mp3HeaderDecoderFSM.Mode,
                                 ) {
-                                    handler!!.post {
-
-                                        if (decoder_codec == null) {
-                                            Log.i(TAG, "setup decoder codec")
-                                            setupDecoderCodec(
-                                                content_type!!,
-                                                freq_hz,
-                                                mode.channelsCount(),
-                                            )
-                                        }
-                                        sample_rate = freq_hz
-
-                                        var buf: ByteBuffer? = null
-                                        while (!freelist.isEmpty()) {
-                                            val b = freelist.removeFirst()
-                                            if (b.capacity() >= frame_len) {
-                                                break
-                                            }
-                                        }
-                                        if (buf == null) {
-                                            buf = ByteBuffer.allocate(frame_len * 3 / 2)
-                                        }
-
-
-                                        if (buf == null) {
-                                            Log.w(TAG, "no buffer allocated")
-                                        }
-                                        if (buf?.position() != 0) {
-                                            Log.w(TAG, "dirty buffer")
-                                        }
-
-                                        current_buffer = buf
-
+                                    if (decoder_codec == null) {
+                                        Log.i(TAG, "setup decoder codec")
+                                        setupDecoderCodec(
+                                            content_type!!,
+                                            freq_hz,
+                                            mode.channelsCount(),
+                                        )
                                     }
+                                    sample_rate = freq_hz
+
+                                    var buf: ByteBuffer? = null
+                                    while (true) {
+                                        val b = freelist.poll()
+                                        if (b == null || b.capacity() >= frame_len) {
+                                            buf = b
+                                            break;
+                                        }
+                                    }
+                                    if (buf == null) {
+                                        buf = ByteBuffer.allocate(frame_len * 3 / 2)
+                                    }
+
+                                    if (buf == null) {
+                                        Log.w(TAG, "no buffer allocated")
+                                    }
+                                    if (buf?.position() != 0) {
+                                        Log.w(TAG, "dirty buffer")
+                                    }
+
+                                    current_buffer = buf
                                 }
 
                                 override fun onPayload(c: ByteBuffer) {
-
-                                    // TODO: use a pair of concurrent
-                                    // queues instead of copy + handler.post
-
-                                    val cc = ByteBuffer.allocate(c.remaining())
-                                    cc.put(c)
-                                    cc.rewind()
-
-                                    handler!!.post {
-
-                                        current_buffer?.let { buf ->
-                                            if (cc.remaining() < buf.remaining()) {
-                                                buf.put(cc)
-                                            }
+                                    current_buffer?.let {
+                                        if (c.remaining() < it.remaining()) {
+                                            it.put(c)
                                         }
-
                                     }
-
                                 }
 
                                 override fun onFrameDone() {
-                                    handler!!.post {
+                                    current_buffer?.let {
+                                        val n = it.position()
+                                        if (n > 0) {
 
-                                        current_buffer?.let {
-                                            val n = it.position()
-                                            if (n > 0) {
+                                            it.limit(it.position())
+                                            it.rewind()
 
-                                                it.limit(it.position())
-                                                it.rewind()
-
-                                                bqueue.addLast(it)
-                                                current_buffer = null
-                                            } else {
-                                                freelist.addLast(it)
-                                            }
+                                            bqueue.add(it)
+                                            current_buffer = null
+                                        } else {
+                                            freelist.add(it)
                                         }
-
                                     }
                                 }
                             }
