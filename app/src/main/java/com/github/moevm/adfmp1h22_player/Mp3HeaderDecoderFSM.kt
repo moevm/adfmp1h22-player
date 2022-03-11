@@ -82,14 +82,11 @@ class Mp3HeaderDecoderFSM(
     // NOTE: apparently this includes the 4-byte header
     private fun calcFrameLength(): Int {
         val padding = if (padded!!) freq_hz!!-1 else 0
-        // val padding = 0         //TEMP
         return (144 * (1000 * br_kbps!!) + padding) / (freq_hz!!)
     }
 
     override fun step(c: ByteBuffer) {
-        // Log.d("BUFFER", "mp3 step")
         while (c.hasRemaining()) {
-            // Log.d("APPDEBUG", "mp3 state ${stt}, rem ${c.remaining()}")
             when (stt) {
                 State.HEADER -> {
                     val b = c.get()
@@ -101,7 +98,6 @@ class Mp3HeaderDecoderFSM(
                         else -> false // should be unreachable
                     }
                     hdr.put(4 - rem, b)
-                    // Log.d("BUFFER", "mp3 p " + hdr.array().toList().toString())
                     if (!valid) {
                         stt = State.RESYNC
                         rem = 2
@@ -109,9 +105,7 @@ class Mp3HeaderDecoderFSM(
                     }
                     if (--rem == 0) {
                         val fl = calcFrameLength()
-                        // Log.d("BUFFER", "mp3 f " + hdr.array().toList().toString())
                         cb.onFormat(fl, freq_hz!!, mode!!)
-                        // Log.d("BUFFER", "mp3 s " + hdr.array().toList().toString())
                         cb.onPayload(hdr.slice())
                         stt = State.PAYLOAD
                         rem = fl - 4
@@ -152,7 +146,6 @@ class Mp3HeaderDecoderFSM(
                 }
             }
         }
-        // Log.d("APPDEBUG", "mp3 done")
     }
 
 }
