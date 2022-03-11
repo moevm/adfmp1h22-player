@@ -45,7 +45,7 @@ class StationListFragment : Fragment(R.layout.fragment_station_list) {
                     Log.d("TAG", response.code().toString())
                     val resource: AddStationList? = response.body()
                     if(resource != null){
-                        val progress = resource.size - 1
+                        var progress = resource.size - 1
                         for (i in 0..progress) {
                             val station = Station(resource[i].changeuuid.toString(), resource[i].name.toString(), resource[i].favicon.toString())
                             stationList.add(i, station)

@@ -14,12 +14,11 @@
 
     <ImageView
         android:id="@+id/station_favicon"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="54dp"
+        android:layout_height="54dp"
         android:maxWidth="54dp"
         android:maxHeight="54dp"
         android:scaleType="centerInside"
-        android:adjustViewBounds="true"
         android:src="@drawable/ic_station_placeholder_54"
         />
 

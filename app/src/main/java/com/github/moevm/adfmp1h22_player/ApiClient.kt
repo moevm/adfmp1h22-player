@@ -25,9 +25,7 @@ class APIClient {
                     "${BuildConfig.VERSION_NAME} " +
                     "(${BuildConfig.APPLICATION_ID}; " +
                     "build:${BuildConfig.VERSION_CODE} " +
-                    "build:${BuildConfig.VERSION_CODE} " +
-                    "Android SDK ${Build.VERSION.SDK_INT}) " +
-                    "${android.os.Build.MODEL}"
+                    "Android SDK ${Build.VERSION.SDK_INT}) "
 
         val client: OkHttpClient = OkHttpClient.Builder().addInterceptor(object : Interceptor {
             @Throws(IOException::class)
@@ -39,6 +37,7 @@ class APIClient {
                 return chain.proceed(newReq)
             }
         }).addNetworkInterceptor(httpLoggingInterceptor).build()
+
         retrofit = Retrofit.Builder()
             .baseUrl("http://de1.api.radio-browser.info/")
             .addConverterFactory(GsonConverterFactory.create())
