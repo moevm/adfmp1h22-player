@@ -4,26 +4,32 @@
 
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <application
-        android:hardwareAccelerated="false"
-        android:largeHeap="true"
         android:allowBackup="true"
+        android:hardwareAccelerated="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
+        android:largeHeap="true"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:usesCleartextTraffic="true"
-        android:theme="@style/Theme.RadioPlayer">
+        android:theme="@style/Theme.RadioPlayer"
+        android:usesCleartextTraffic="true">
+
+        <service
+            android:name=".Service1"
+            android:enabled="true"
+            android:exported="false" />
+
         <activity
             android:name=".HistoryActivity"
             android:exported="false"
-            android:label="@string/history_activity_name"/>
+            android:label="@string/history_activity_name" />
         <activity
             android:name=".AddStationActivity"
             android:exported="false"
-            android:label="@string/add_station_activity_name"/>
+            android:label="@string/add_station_activity_name" />
         <activity
             android:name=".StationInfoActivity"
             android:exported="false"
