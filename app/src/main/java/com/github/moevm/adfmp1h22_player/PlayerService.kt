@@ -275,6 +275,8 @@ class PlayerService : Service() {
                                         if (b == null || b.capacity() >= frame_len) {
                                             buf = b
                                             break;
+                                        } else {
+                                            Log.w(TAG, "buffer {b.capacity()} too small for ${frame_len}b frame")
                                         }
                                     }
                                     if (buf == null) {
