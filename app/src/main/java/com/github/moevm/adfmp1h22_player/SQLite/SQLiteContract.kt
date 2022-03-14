@@ -10,6 +10,13 @@ object SQLiteContract {
         const val COLUMN_FAVICON = "favicon"
         const val COLUMN_FAVICON_DATE = "faviconDate"
     }
-    object AddedStationsTable{}
+    object AddedStationsTable{
+        const val TABLE_NAME = "AddedStations"
+        const val COLUMN_ID = "id"
+        const val COLUMN_CHANGEUUID = "changeuuid"
+        const val COLUMN_NAME = "name"
+        const val COLUMN_FAVICON = "favicon"
+        const val COLUMN_FAVICON_DATE = "faviconDate"
+    }
     object HistoryTable{}
 }

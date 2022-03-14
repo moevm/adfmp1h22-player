@@ -35,39 +35,38 @@ class Service1 : Service() {
         Log.d("TAG", "updateAddedList")
         val apiInterface = APIClient().getClient()?.create(APIInterface::class.java)
 
-//        GlobalScope.launch {
-            val call: Call<AddStationList?>? = apiInterface!!.AddStationListResources()
-            Log.d("TAG", call?.request()?.headers.toString())
-            call?.enqueue(object  : Callback<AddStationList?> {
-                override fun onResponse(
-                    call: Call<AddStationList?>,
-                    response: Response<AddStationList?>
-                ) {
-                    Log.d("TAG", response.code().toString())
-                    val resource: AddStationList? = response.body()
-                    if(resource != null){
-                        var progress = resource.size - 1
-                        for (i in 0..progress) {
-                            val station = Station(resource[i].changeuuid.toString(), resource[i].name.toString(), resource[i].favicon.toString())
-                            manager.insertRow(station)
-                            if(i < 201){
-                                manager.inR(station)
-//                                Log.d("TAG","Должны тут данные в базу записывать")
-                            }
-                        }
-                    }
-                    else{
-                        Log.d("TAG", "Error in StationListFragmrnt.kt")
-                    }
 
+        val stL = ArrayList<Station>()
+        val call: Call<AddStationList?>? = apiInterface!!.AddStationListResources()
+        Log.d("TAG", call?.request()?.headers.toString())
+        call?.enqueue(object  : Callback<AddStationList?> {
+            override fun onResponse(
+                call: Call<AddStationList?>,
+                response: Response<AddStationList?>
+            ) {
+                Log.d("TAG", response.code().toString())
+                val resource: AddStationList? = response.body()
+                if(resource != null){
+                    var progress = resource.size - 1
+                    for (i in 0..progress) {
+                        val station = Station(resource[i].changeuuid.toString(), resource[i].name.toString(), resource[i].favicon.toString())
+                        stL.add(station)
+                    }
+                    manager.insertRows(stL)
+                    manager.deleteTable("AllStations")
+                    manager.replace("AllStations_new", "AllStations")
+                }
+                else{
+                    Log.d("TAG", "Error in StationListFragmrnt.kt")
                 }
 
-                override fun onFailure(call: Call<AddStationList?>, t: Throwable) {
-                    call.cancel()
-                }
+            }
 
-            })
-//        }
+            override fun onFailure(call: Call<AddStationList?>, t: Throwable) {
+                call.cancel()
+            }
+
+        })
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -75,15 +74,15 @@ class Service1 : Service() {
 
         val manager = SQLiteAllStationsManager(db!!)
 
-//        val createTable_new = "CREATE TABLE ${SQLiteContract.AllStationsTable.TABLE_NAME_NEW} (" +
-//                SQLiteContract.AllStationsTable.COLUMN_ID +
-//                " INTEGER PRIMARY KEY AUTOINCREMENT," +
-//                SQLiteContract.AllStationsTable.COLUMN_CHANGEUUID + " TEXT," +
-//                SQLiteContract.AllStationsTable.COLUMN_NAME + " TEXT," +
-//                SQLiteContract.AllStationsTable.COLUMN_FAVICON + " TEXT," +
-//                SQLiteContract.AllStationsTable.COLUMN_FAVICON_DATE +
-//                " INTEGER NOT NULL)"
-//        manager.createTable(createTable_new)
+        val createTable_new = "CREATE TABLE IF NOT EXISTS ${SQLiteContract.AllStationsTable.TABLE_NAME_NEW} (" +
+                SQLiteContract.AllStationsTable.COLUMN_ID +
+                " INTEGER PRIMARY KEY AUTOINCREMENT," +
+                SQLiteContract.AllStationsTable.COLUMN_CHANGEUUID + " TEXT," +
+                SQLiteContract.AllStationsTable.COLUMN_NAME + " TEXT," +
+                SQLiteContract.AllStationsTable.COLUMN_FAVICON + " TEXT," +
+                SQLiteContract.AllStationsTable.COLUMN_FAVICON_DATE +
+                " INTEGER NOT NULL)"
+        manager.createTable(createTable_new)
 
         updateAddedList(manager)
         Log.d("TAG", "Service1 started")

@@ -10,7 +10,7 @@ class SQLHelper(
 ) : SQLiteOpenHelper(context, "RadioPlayerDataBase.db", null, 2) {
     override fun onCreate(db: SQLiteDatabase?) {
         Log.d("TAG", "TUT1")
-        val createTable = "CREATE TABLE ${SQLiteContract.AllStationsTable.TABLE_NAME} (" +
+        val createTableAllStations = "CREATE TABLE IF NOT EXISTS ${SQLiteContract.AllStationsTable.TABLE_NAME} (" +
                 SQLiteContract.AllStationsTable.COLUMN_ID +
                 " INTEGER PRIMARY KEY AUTOINCREMENT," +
                 SQLiteContract.AllStationsTable.COLUMN_CHANGEUUID + " TEXT," +
@@ -18,8 +18,17 @@ class SQLHelper(
                 SQLiteContract.AllStationsTable.COLUMN_FAVICON + " TEXT," +
                 SQLiteContract.AllStationsTable.COLUMN_FAVICON_DATE +
                 " INTEGER NOT NULL)"
+        db?.execSQL(createTableAllStations)
 
-        db?.execSQL(createTable)
+        val createTableAddedStations = "CREATE TABLE IF NOT EXISTS ${SQLiteContract.AddedStationsTable.TABLE_NAME} (" +
+                SQLiteContract.AddedStationsTable.COLUMN_ID +
+                " INTEGER PRIMARY KEY AUTOINCREMENT," +
+                SQLiteContract.AddedStationsTable.COLUMN_CHANGEUUID + " TEXT," +
+                SQLiteContract.AddedStationsTable.COLUMN_NAME + " TEXT," +
+                SQLiteContract.AddedStationsTable.COLUMN_FAVICON + " TEXT," +
+                SQLiteContract.AddedStationsTable.COLUMN_FAVICON_DATE +
+                " INTEGER NOT NULL)"
+        db?.execSQL(createTableAddedStations)
     }
 
     override fun onUpgrade(db: SQLiteDatabase?, p1: Int, p2: Int) {
