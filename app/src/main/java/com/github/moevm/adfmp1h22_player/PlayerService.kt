@@ -1,5 +1,8 @@
 package com.github.moevm.adfmp1h22_player
 
+import android.content.Context
+import android.widget.Toast
+
 import android.util.Log
 import java.lang.Thread
 
@@ -52,13 +55,13 @@ class PlayerService : Service() {
     var mHandler: Handler? = null
 
     class PlayerThread(
-        private val userAgent: String
+        private val context: Context,
+        private val userAgent: String,
+        private val sid: Int,
     ) : HandlerThread("PlayerThread") {
 
         lateinit var hc: HttpClient
-
-        var handler: Handler? = null
-        var sid: Int? = null
+        lateinit var handler: Handler
 
         var metaint: Int? = null
         var content_type: String? = null
@@ -105,7 +108,7 @@ class PlayerService : Service() {
                 .setBufferSizeInBytes(
                     AudioTrack.getMinBufferSize(sample_rate, chcfg, enc)
                 )
-                .setSessionId(sid!!)
+                .setSessionId(sid)
                 .setTransferMode(AudioTrack.MODE_STREAM)
                 .build()
 
@@ -208,7 +211,7 @@ class PlayerService : Service() {
                                 setupPlayer(fmt)
                             }
                         },
-                        handler!!
+                        handler
                     )
                     mc.configure(fmt, null, null, 0)
                     mc.start()
@@ -342,7 +345,7 @@ class PlayerService : Service() {
                     decoder!!.step(c)
                 }
                 .send { r ->
-                    handler!!.post {
+                    handler.post {
                         player?.release()
                         decoder_codec?.release()
                         if (r.isFailed()) {
@@ -393,9 +396,20 @@ class PlayerService : Service() {
         override fun run() {
             hc = HttpClient()
             hc.start()
-            // TODO: handle exceptions
-            super.run()
+            try {
+                super.run()
+            } catch (e: Exception) {
+                Log.e(TAG, "Uncaught exception in PlayerThread")
+                Toast.makeText(
+                    context, "RadioPlayer: Uncaught exception in player service",
+                    Toast.LENGTH_LONG,
+                ).show()
+            }
             hc.stop()
+        }
+
+        override protected fun onLooperPrepared() {
+            handler = Handler(looper)
         }
     }
 
@@ -463,13 +477,10 @@ class PlayerService : Service() {
         val am = getSystemService(AudioManager::class.java)
         val sid = am.generateAudioSessionId()
 
-        mThread = PlayerThread(resources.getString(R.string.user_agent))
+        mThread = PlayerThread(this, resources.getString(R.string.user_agent), sid)
             .also { thread ->
                  thread.start()
-                 val h = Handler(thread.looper, thread::handleMessage)
-                 mHandler = h
-                 thread.handler = h // NOTE: there’s probably a race here
-                 thread.sid = sid
+                 mHandler = Handler(thread.looper, thread::handleMessage)
             }
 
         val notif = makeNotification()
