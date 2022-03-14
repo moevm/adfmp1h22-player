@@ -73,6 +73,8 @@ class PlayerService : Service() {
         var timestamp: Long = 0.toLong()
         var player: AudioTrack? = null
 
+        var stat_allocated_buffers: Int = 0 // How many frame buffers were allocated
+
         fun reset() {
             metaint = null
             content_type = null
@@ -268,6 +270,7 @@ class PlayerService : Service() {
                                     }
                                     if (buf == null) {
                                         buf = ByteBuffer.allocate(frame_len * 3 / 2)
+                                        stat_allocated_buffers++
                                     }
 
                                     if (buf == null) {
@@ -376,6 +379,7 @@ class PlayerService : Service() {
                 }
                 CMD_DEBUG_INFO -> {
                     Log.d(TAG, "sizes: bqueue:${bqueue.size} freelist:${freelist.size}")
+                    Log.d(TAG, "allocated buffers: ${stat_allocated_buffers}")
                     true
                 }
                 else -> false
