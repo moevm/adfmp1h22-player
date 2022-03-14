@@ -260,7 +260,7 @@ class PlayerService : Service() {
                                     }
                                     sample_rate = freq_hz
 
-                                    var buf: ByteBuffer? = null
+                                    var buf: ByteBuffer?
                                     while (true) {
                                         val b = freelist.poll()
                                         if (b == null || b.capacity() >= frame_len) {
@@ -269,7 +269,9 @@ class PlayerService : Service() {
                                         }
                                     }
                                     if (buf == null) {
-                                        buf = ByteBuffer.allocate(frame_len * 3 / 2)
+                                        // +1 to be able to reuse buffer
+                                        // in case padding=0 here
+                                        buf = ByteBuffer.allocate(frame_len + 1)
                                         stat_allocated_buffers++
                                     }
 
@@ -285,8 +287,10 @@ class PlayerService : Service() {
 
                                 override fun onPayload(c: ByteBuffer) {
                                     current_buffer?.let {
-                                        if (c.remaining() < it.remaining()) {
+                                        if (c.remaining() <= it.remaining()) {
                                             it.put(c)
+                                        } else {
+                                            Log.w(TAG, "lost ${c.remaining()}b of payload")
                                         }
                                     }
                                 }
@@ -295,13 +299,13 @@ class PlayerService : Service() {
                                     current_buffer?.let {
                                         val n = it.position()
                                         if (n > 0) {
-
                                             it.limit(it.position())
                                             it.rewind()
 
                                             bqueue.add(it)
                                             current_buffer = null
                                         } else {
+                                            Log.w(TAG, "empty frame")
                                             freelist.add(it)
                                         }
                                     }
