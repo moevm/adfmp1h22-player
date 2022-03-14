@@ -49,6 +49,8 @@ class PlayerService : Service() {
         val NOTIF_ID = 1
 
         val MP3_SAMPLES_PER_FRAME = 1152
+
+        val MAX_CACHE_SECONDS = 5
     }
 
     var mThread: PlayerThread? = null
@@ -73,10 +75,12 @@ class PlayerService : Service() {
 
         var decoder_codec: MediaCodec? = null
         var sample_rate: Int = -1
+        var max_frames: Int = 0
         var timestamp: Long = 0.toLong()
         var player: AudioTrack? = null
 
-        var stat_allocated_buffers: Int = 0 // How many frame buffers were allocated
+        var stat_allocated_buffers: Int = 0
+        var stat_dropped_buffers: Int = 0
 
         fun reset() {
             metaint = null
@@ -262,6 +266,8 @@ class PlayerService : Service() {
                                         )
                                     }
                                     sample_rate = freq_hz
+                                    max_frames =
+                                        freq_hz * MAX_CACHE_SECONDS / MP3_SAMPLES_PER_FRAME
 
                                     var buf: ByteBuffer?
                                     while (true) {
@@ -299,7 +305,7 @@ class PlayerService : Service() {
                                 }
 
                                 override fun onFrameDone() {
-                                    current_buffer?.let {
+                                    current_buffer?.also {
                                         val n = it.position()
                                         if (n > 0) {
                                             it.limit(it.position())
@@ -307,6 +313,19 @@ class PlayerService : Service() {
 
                                             bqueue.add(it)
                                             current_buffer = null
+
+                                            val bqsz = bqueue.size
+                                            var ndrop = 0
+                                            while (bqsz - ndrop > max_frames) {
+                                                ndrop++
+                                                bqueue.poll()?.let {
+                                                    freelist.add(it)
+                                                }
+                                                stat_dropped_buffers++
+                                            }
+                                            if (ndrop > 0) {
+                                                Log.w(TAG, "dropped $ndrop frames")
+                                            }
                                         } else {
                                             Log.w(TAG, "empty frame")
                                             freelist.add(it)
@@ -387,6 +406,7 @@ class PlayerService : Service() {
                 CMD_DEBUG_INFO -> {
                     Log.d(TAG, "sizes: bqueue:${bqueue.size} freelist:${freelist.size}")
                     Log.d(TAG, "allocated buffers: ${stat_allocated_buffers}")
+                    Log.d(TAG, "dropped buffers  : ${stat_dropped_buffers}")
                     true
                 }
                 else -> false
