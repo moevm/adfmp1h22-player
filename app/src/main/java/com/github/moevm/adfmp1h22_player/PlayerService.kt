@@ -441,7 +441,7 @@ class PlayerService : Service() {
             val chan = NotificationChannel(
                 NOTIF_CHANNEL_ID,
                 "Default",
-                NotificationManager.IMPORTANCE_DEFAULT
+                NotificationManager.IMPORTANCE_LOW
             )
             nm.createNotificationChannel(chan)
             NotificationCompat.Builder(this, chan.id)
