@@ -198,6 +198,10 @@ class PlayerService : Service() {
                                     } else {
                                         Log.w(TAG, "onIBA: MediaCodec buffer too small")
                                     }
+                                } else {
+                                    if (!freelist.isEmpty()) {
+                                        Log.w(TAG, "drained bqueue")
+                                    }
                                 }
 
                                 val n = buf.position()
@@ -402,14 +406,17 @@ class PlayerService : Service() {
                                     // TODO: a better parser?
                                     val s1 = s.removeSurrounding("StreamTitle='", "';")
                                     if (s1.isEmpty() || s1.length != s.length - 15) {
+                                        Log.d(TAG, "empty metadata")
                                         return
                                     }
                                     val s2 = s1
                                         .trimStart(Char::isWhitespace)
                                         .trimEnd(Char::isWhitespace)
                                     if (s2.isEmpty()) {
+                                        Log.i(TAG, "whitespace-only metadata")
                                         return
                                     }
+                                    Log.d(TAG, "new metadata: ${s2}")
                                     current_meta = s2
                                 }
                             }
