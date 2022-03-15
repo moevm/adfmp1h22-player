@@ -1,5 +1,7 @@
 package com.github.moevm.adfmp1h22_player
 
+import java.util.LinkedList
+
 import android.content.Context
 import android.widget.Toast
 
@@ -62,25 +64,37 @@ class PlayerService : Service() {
         private val sid: Int,
     ) : HandlerThread("PlayerThread") {
 
-        lateinit var hc: HttpClient
-        lateinit var handler: Handler
+        private class Frame(
+            public val buf: ByteBuffer,
+            public var meta: String?,
+        )
 
-        var metaint: Int? = null
-        var content_type: String? = null
-        var decoder: DecoderFSM? = null
+        private class MetaDataRecord(
+            public val timestamp: Long,
+            public val meta: String,
+        )
 
-        val bqueue = ConcurrentLinkedQueue<ByteBuffer>()
-        val freelist = ConcurrentLinkedQueue<ByteBuffer>()
-        var current_buffer: ByteBuffer? = null
+        private lateinit var hc: HttpClient
+        private lateinit var handler: Handler
 
-        var decoder_codec: MediaCodec? = null
-        var sample_rate: Int = -1
-        var max_frames: Int = 0
-        var timestamp: Long = 0.toLong()
-        var player: AudioTrack? = null
+        private var metaint: Int? = null
+        private var content_type: String? = null
+        private var decoder: DecoderFSM? = null
 
-        var stat_allocated_buffers: Int = 0
-        var stat_dropped_buffers: Int = 0
+        private val bqueue = ConcurrentLinkedQueue<Frame>()
+        private val freelist = ConcurrentLinkedQueue<Frame>()
+        private var current_frame: Frame? = null
+        private var current_meta: String? = null
+
+        private var decoder_codec: MediaCodec? = null
+        private var sample_rate: Int = -1
+        private var max_frames: Int = 0
+        private var timestamp: Long = 0.toLong()
+        private var player: AudioTrack? = null
+        private val metaqueue = LinkedList<MetaDataRecord>()
+
+        private var stat_allocated_buffers: Int = 0
+        private var stat_dropped_buffers: Int = 0
 
         fun reset() {
             metaint = null
@@ -164,12 +178,16 @@ class PlayerService : Service() {
 
                                 buf.clear()
 
-                                val inb = bqueue.poll()
-                                if (inb != null) {
-                                    if (inb.remaining() <= buf.remaining()) {
-                                        buf.put(inb)
-                                        inb.clear()
-                                        freelist.add(inb)
+                                val inf = bqueue.poll()
+                                if (inf != null) {
+                                    if (inf.buf.remaining() <= buf.remaining()) {
+                                        buf.put(inf.buf)
+                                        inf.buf.clear()
+                                        inf.meta?.let {
+                                            metaqueue.add(MetaDataRecord(timestamp, it))
+                                        }
+                                        inf.meta = null
+                                        freelist.add(inf)
                                     } else {
                                         Log.w(TAG, "onIBA: MediaCodec buffer too small")
                                     }
@@ -189,6 +207,19 @@ class PlayerService : Service() {
                                 index: Int,
                                 info: MediaCodec.BufferInfo,
                             ) {
+
+                                if (info.size == 0) {
+                                    return
+                                }
+
+                                while (!metaqueue.isEmpty()
+                                       && info.presentationTimeUs >= metaqueue.get(0).timestamp) {
+                                    val m = metaqueue.remove()
+                                    Toast.makeText(
+                                        context, "RadioPlayer: ${m.meta}",
+                                        Toast.LENGTH_LONG,
+                                    ).show()
+                                }
 
                                 val buf = mc.getOutputBuffer(index)
                                 if (buf == null) {
@@ -269,37 +300,35 @@ class PlayerService : Service() {
                                     max_frames =
                                         freq_hz * MAX_CACHE_SECONDS / MP3_SAMPLES_PER_FRAME
 
-                                    var buf: ByteBuffer?
+                                    var frm: Frame?
                                     while (true) {
-                                        val b = freelist.poll()
-                                        if (b == null || b.capacity() >= frame_len) {
-                                            buf = b
+                                        val f = freelist.poll()
+                                        if (f == null || f.buf.capacity() >= frame_len) {
+                                            frm = f
                                             break;
                                         } else {
-                                            Log.w(TAG, "buffer {b.capacity()} too small for ${frame_len}b frame")
+                                            Log.w(TAG, "buffer {f.buf.capacity()} too small for ${frame_len}b frame")
                                         }
                                     }
-                                    if (buf == null) {
+                                    if (frm == null) {
                                         // +1 to be able to reuse buffer
                                         // in case padding=0 here
-                                        buf = ByteBuffer.allocate(frame_len + 1)
+                                        val buf = ByteBuffer.allocate(frame_len + 1)
+                                        frm = Frame(buf, null)
                                         stat_allocated_buffers++
                                     }
 
-                                    if (buf == null) {
-                                        Log.w(TAG, "no buffer allocated")
-                                    }
-                                    if (buf?.position() != 0) {
+                                    if (frm.buf.position() != 0) {
                                         Log.w(TAG, "dirty buffer")
                                     }
 
-                                    current_buffer = buf
+                                    current_frame = frm
                                 }
 
                                 override fun onPayload(c: ByteBuffer) {
-                                    current_buffer?.let {
-                                        if (c.remaining() <= it.remaining()) {
-                                            it.put(c)
+                                    current_frame?.let {
+                                        if (c.remaining() <= it.buf.remaining()) {
+                                            it.buf.put(c)
                                         } else {
                                             Log.w(TAG, "lost ${c.remaining()}b of payload")
                                         }
@@ -307,14 +336,19 @@ class PlayerService : Service() {
                                 }
 
                                 override fun onFrameDone() {
-                                    current_buffer?.also {
-                                        val n = it.position()
+                                    current_frame?.also { frm ->
+                                        val n = frm.buf.position()
                                         if (n > 0) {
-                                            it.limit(it.position())
-                                            it.rewind()
+                                            current_meta?.let {
+                                                frm.meta = it
+                                                current_meta = null
+                                            }
 
-                                            bqueue.add(it)
-                                            current_buffer = null
+                                            frm.buf.limit(frm.buf.position())
+                                            frm.buf.rewind()
+
+                                            bqueue.add(frm)
+                                            current_frame = null
 
                                             val bqsz = bqueue.size
                                             var ndrop = 0
@@ -330,7 +364,7 @@ class PlayerService : Service() {
                                             }
                                         } else {
                                             Log.w(TAG, "empty frame")
-                                            freelist.add(it)
+                                            freelist.add(frm)
                                         }
                                     }
                                 }
@@ -355,6 +389,18 @@ class PlayerService : Service() {
                                 }
 
                                 override fun onMetaData(s: String) {
+                                    // TODO: a better parser?
+                                    val s1 = s.removeSurrounding("StreamTitle='", "';")
+                                    if (s1.isEmpty() || s1.length != s.length - 15) {
+                                        return
+                                    }
+                                    val s2 = s1
+                                        .trimStart(Char::isWhitespace)
+                                        .trimEnd(Char::isWhitespace)
+                                    if (s2.isEmpty()) {
+                                        return
+                                    }
+                                    current_meta = s2
                                 }
                             }
                         )
