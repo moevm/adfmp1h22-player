@@ -20,6 +20,7 @@ class PlayerFragment : Fragment(R.layout.fragment_player) {
                 setImageResource(R.drawable.ic_play_64)
                 setEnabled(false)
             }
+            PlaybackState.LOADING -> {} // TODO
             PlaybackState.PAUSED -> ib_playpause.run {
                 setImageResource(R.drawable.ic_play_64)
                 setEnabled(true)

@@ -59,10 +59,16 @@ class PlayerService : Service() {
     var mHandler: Handler? = null
 
     class PlayerThread(
-        private val context: Context,
         private val userAgent: String,
         private val sid: Int,
+        private val cb: Callback,
     ) : HandlerThread("PlayerThread") {
+
+        interface Callback {
+            fun onMetaData(s: String)
+            fun onPlaybackStateChanged(ps: PlaybackState)
+            fun onError(e: Exception)
+        }
 
         private class Frame(
             public val buf: ByteBuffer,
@@ -151,6 +157,8 @@ class PlayerService : Service() {
 
             player?.release()
             player = at
+
+            cb.onPlaybackStateChanged(PlaybackState.PLAYING)
         }
 
         private fun setupDecoderCodec(
@@ -226,10 +234,7 @@ class PlayerService : Service() {
                                 while (!metaqueue.isEmpty()
                                        && info.presentationTimeUs >= metaqueue.get(0).timestamp) {
                                     val m = metaqueue.remove()
-                                    Toast.makeText(
-                                        context, "RadioPlayer: ${m.meta}",
-                                        Toast.LENGTH_LONG,
-                                    ).show()
+                                    cb.onMetaData(m.meta)
                                 }
 
                                 val buf = mc.getOutputBuffer(index)
@@ -481,16 +486,15 @@ class PlayerService : Service() {
         override fun run() {
             hc = HttpClient()
             hc.start()
+            cb.onPlaybackStateChanged(PlaybackState.LOADING)
             try {
                 super.run()
             } catch (e: Exception) {
                 Log.e(TAG, "Uncaught exception in PlayerThread")
-                Toast.makeText(
-                    context, "RadioPlayer: Uncaught exception in player service",
-                    Toast.LENGTH_LONG,
-                ).show()
+                cb.onError(e)
             }
             hc.stop()
+            cb.onPlaybackStateChanged(PlaybackState.STOPPED)
         }
 
         override protected fun onLooperPrepared() {
@@ -520,6 +524,12 @@ class PlayerService : Service() {
             it.obtainMessage(CMD_DEBUG_INFO)
                 .sendToTarget()
         }
+    }
+
+    private fun onPlaybackStateChanged(ps: PlaybackState) {
+        Log.d(TAG, "playback state: $ps")
+        // TODO: report to listeners
+        // TODO: update notification
     }
 
     inner class PlayerServiceBinder : Binder() {
@@ -562,11 +572,35 @@ class PlayerService : Service() {
         val am = getSystemService(AudioManager::class.java)
         val sid = am.generateAudioSessionId()
 
-        mThread = PlayerThread(this, resources.getString(R.string.user_agent), sid)
-            .also { thread ->
-                 thread.start()
-                 mHandler = Handler(thread.looper, thread::handleMessage)
+        mThread = PlayerThread(
+            resources.getString(R.string.user_agent), sid,
+            object : PlayerThread.Callback {
+                override fun onMetaData(s: String) {
+                    Toast.makeText(
+                        this@PlayerService, "RadioPlayer: $s",
+                        Toast.LENGTH_LONG,
+                    ).show()
+                    // TODO: report to listeners
+                    // TODO: update notification
+                    // TODO: update playback history
+                }
+
+                override fun onPlaybackStateChanged(ps: PlaybackState) {
+                    this@PlayerService.onPlaybackStateChanged(ps)
+                }
+
+                override fun onError(e: Exception) {
+                    Toast.makeText(
+                        this@PlayerService, "RadioPlayer: Uncaught exception in player service",
+                        Toast.LENGTH_LONG,
+                    ).show()
+                    // We’ll get an onPlaybackStateChanged as well
+                }
             }
+        ).also { thread ->
+            thread.start()
+            mHandler = Handler(thread.looper, thread::handleMessage)
+        }
 
         val notif = makeNotification()
         startForeground(NOTIF_ID, notif)
