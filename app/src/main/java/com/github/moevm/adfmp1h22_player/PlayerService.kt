@@ -67,7 +67,12 @@ class PlayerService : Service() {
         private class Frame(
             public val buf: ByteBuffer,
             public var meta: String?,
-        )
+        ) {
+            fun clear() {
+                buf.clear()
+                meta = null
+            }
+        }
 
         private class MetaDataRecord(
             public val timestamp: Long,
@@ -81,17 +86,21 @@ class PlayerService : Service() {
         private var content_type: String? = null
         private var decoder: DecoderFSM? = null
 
+        // Used concurrently from HTTP and Handler threads
         private val bqueue = ConcurrentLinkedQueue<Frame>()
         private val freelist = ConcurrentLinkedQueue<Frame>()
+
+        // HTTP threads only
         private var current_frame: Frame? = null
         private var current_meta: String? = null
 
         private var decoder_codec: MediaCodec? = null
+        private var player: AudioTrack? = null
+
+        private var timestamp: Long = 0.toLong()
+        private val metaqueue = LinkedList<MetaDataRecord>()
         private var sample_rate: Int = -1
         private var max_frames: Int = 0
-        private var timestamp: Long = 0.toLong()
-        private var player: AudioTrack? = null
-        private val metaqueue = LinkedList<MetaDataRecord>()
 
         private var stat_allocated_buffers: Int = 0
         private var stat_dropped_buffers: Int = 0
@@ -182,11 +191,9 @@ class PlayerService : Service() {
                                 if (inf != null) {
                                     if (inf.buf.remaining() <= buf.remaining()) {
                                         buf.put(inf.buf)
-                                        inf.buf.clear()
                                         inf.meta?.let {
                                             metaqueue.add(MetaDataRecord(timestamp, it))
                                         }
-                                        inf.meta = null
                                         freelist.add(inf)
                                     } else {
                                         Log.w(TAG, "onIBA: MediaCodec buffer too small")
@@ -304,6 +311,7 @@ class PlayerService : Service() {
                                     while (true) {
                                         val f = freelist.poll()
                                         if (f == null || f.buf.capacity() >= frame_len) {
+                                            f?.clear()
                                             frm = f
                                             break;
                                         } else {
@@ -316,10 +324,6 @@ class PlayerService : Service() {
                                         val buf = ByteBuffer.allocate(frame_len + 1)
                                         frm = Frame(buf, null)
                                         stat_allocated_buffers++
-                                    }
-
-                                    if (frm.buf.position() != 0) {
-                                        Log.w(TAG, "dirty buffer")
                                     }
 
                                     current_frame = frm
@@ -354,8 +358,11 @@ class PlayerService : Service() {
                                             var ndrop = 0
                                             while (bqsz - ndrop > max_frames) {
                                                 ndrop++
-                                                bqueue.poll()?.let {
-                                                    freelist.add(it)
+                                                bqueue.poll()?.let { f ->
+                                                    f.meta?.let {
+                                                        current_meta = it
+                                                    }
+                                                    freelist.add(f)
                                                 }
                                                 stat_dropped_buffers++
                                             }
@@ -364,6 +371,9 @@ class PlayerService : Service() {
                                             }
                                         } else {
                                             Log.w(TAG, "empty frame")
+                                            frm.meta?.let {
+                                                current_meta = it
+                                            }
                                             freelist.add(frm)
                                         }
                                     }
