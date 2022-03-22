@@ -12,11 +12,9 @@ class PlayerFragment : Fragment(R.layout.fragment_player) {
 
     private var mState: PlaybackState = PlaybackState.STOPPED
 
-    var onStopListener: (() -> Unit)? = null
-    var queryState: (() -> PlaybackState)? = null
-    var setState: ((PlaybackState) -> Unit)? = null
+    var onStopRequested: (() -> Unit)? = null
 
-    private val playbackState: PlaybackModel by activityViewModels()
+    private val playbackModel: PlaybackModel by activityViewModels()
 
     fun updateUiState() {
         when (mState) {
@@ -41,15 +39,7 @@ class PlayerFragment : Fragment(R.layout.fragment_player) {
             return
         }
         mState = value
-        // TODO: setState
         updateUiState()
-        if (mState == PlaybackState.STOPPED) {
-            onStopListener?.let { it() }
-        }
-    }
-
-    fun setMetaData(s: String) {
-        tv_tracktitle.setText(s)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -67,17 +57,22 @@ class PlayerFragment : Fragment(R.layout.fragment_player) {
         }
 
         ib_stop.setOnClickListener {
-            setPlayingState(PlaybackState.STOPPED)
+            onStopRequested?.let { it() }
         }
 
-        playbackState.metadata.observe(this, { s -> setMetaData(s) })
+        playbackModel.metadata.observe(viewLifecycleOwner) { s ->
+            tv_tracktitle.setText(s)
+        }
+        playbackModel.state.observe(viewLifecycleOwner) { stt ->
+            setPlayingState(stt)
+        }
 
         updateUiState()
     }
 
     override fun onResume() {
         super.onResume()
-        val state = queryState?.let { it() } ?: PlaybackState.STOPPED
+        val state = playbackModel.state.value ?: PlaybackState.STOPPED
         setPlayingState(state)
     }
 }

@@ -37,17 +37,11 @@ class MainActivity : AppCompatActivity() {
 
             override fun createFragment(pos: Int): Fragment = when (pos) {
                 0 -> PlayerFragment().also {
-                    it.onStopListener = {
-                        setPlayingStation(null)
-                    }
-                    it.queryState = {
-                        if (current_station != null) {
-                            PlaybackState.PLAYING
-                        } else {
-                            PlaybackState.STOPPED
+                    it.onStopRequested = {
+                        withPlayerService {
+                            it.stopPlayback()
                         }
                     }
-                    // TODO: setState
                 }
                 1 -> StationListFragment().also {
                     it.onSetStation = { s: Station ->
@@ -62,7 +56,7 @@ class MainActivity : AppCompatActivity() {
             object : ViewPager2.OnPageChangeCallback() {
                 override fun onPageSelected(pos: Int) {
                     if (pos == 0) {
-                        if (current_station?.let {
+                        if (playbackModel.station.value?.let {
                                 setTitle(it.name)
                                 false
                             } ?: true) {
@@ -124,11 +118,13 @@ class MainActivity : AppCompatActivity() {
         override fun onServiceConnected(n: ComponentName, sb: IBinder) {
             mServiceBinder = sb as PlayerService.PlayerServiceBinder
             sb.service.mMetaData.observe(this@MainActivity) { s ->
-                Toast.makeText(
-                    this@MainActivity, "RadioPlayer: $s",
-                    Toast.LENGTH_LONG,
-                ).show()
                 playbackModel.metadata.setValue(s)
+            }
+            sb.service.mPlaybackState.observe(this@MainActivity) { stt ->
+                playbackModel.state.setValue(stt)
+                if (stt == PlaybackState.STOPPED) {
+                    setPlayingStation(null)
+                }
             }
             action(sb.service)
         }
@@ -161,11 +157,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun setPlayingStation(s: Station?) {
-        if (s == current_station) {
+        if (s == playbackModel.station.value) {
             return
         }
 
-        current_station = s
+        playbackModel.station.setValue(s)
         if (s != null) {
 
             withPlayerService {
@@ -175,11 +171,6 @@ class MainActivity : AppCompatActivity() {
             pager.setCurrentItem(0)
 
         } else {
-
-            withPlayerService {
-                it.stopPlayback()
-            }
-
             pager.setCurrentItem(1)
         }
     }
