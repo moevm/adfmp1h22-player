@@ -55,6 +55,7 @@ class PlayerService : Service() {
         val MP3_SAMPLES_PER_FRAME = 1152
 
         val MAX_CACHE_SECONDS = 5
+        val MAX_CACHE_SECONDS_SOFT = 3
     }
 
     var mThread: PlayerThread? = null
@@ -111,6 +112,7 @@ class PlayerService : Service() {
         private val metaqueue = LinkedList<MetaDataRecord>()
         private var sample_rate: Int = -1
         private var max_frames: Int = 0
+        private var max_frames_soft: Int = 0
 
         private var stat_allocated_buffers: Int = 0
         private var stat_dropped_buffers: Int = 0
@@ -319,6 +321,8 @@ class PlayerService : Service() {
                                     sample_rate = freq_hz
                                     max_frames =
                                         freq_hz * MAX_CACHE_SECONDS / MP3_SAMPLES_PER_FRAME
+                                    max_frames_soft =
+                                        freq_hz * MAX_CACHE_SECONDS_SOFT / MP3_SAMPLES_PER_FRAME
 
                                     var frm: Frame?
                                     while (true) {
@@ -369,15 +373,17 @@ class PlayerService : Service() {
 
                                             val bqsz = bqueue.size
                                             var ndrop = 0
-                                            while (bqsz - ndrop > max_frames) {
-                                                ndrop++
-                                                bqueue.poll()?.let { f ->
-                                                    f.meta?.let {
-                                                        current_meta = it
+                                            if (bqsz - ndrop > max_frames) {
+                                                while (bqsz - ndrop > max_frames_soft) {
+                                                    ndrop++
+                                                    bqueue.poll()?.let { f ->
+                                                        f.meta?.let {
+                                                            current_meta = it
+                                                        }
+                                                        freelist.add(f)
                                                     }
-                                                    freelist.add(f)
+                                                    stat_dropped_buffers++
                                                 }
-                                                stat_dropped_buffers++
                                             }
                                             if (ndrop > 0) {
                                                 Log.w(TAG, "dropped $ndrop frames")
