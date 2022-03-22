@@ -1,5 +1,7 @@
 package com.github.moevm.adfmp1h22_player
 
+import androidx.fragment.app.activityViewModels
+
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
@@ -13,6 +15,8 @@ class PlayerFragment : Fragment(R.layout.fragment_player) {
     var onStopListener: (() -> Unit)? = null
     var queryState: (() -> PlaybackState)? = null
     var setState: ((PlaybackState) -> Unit)? = null
+
+    private val playbackState: PlaybackModel by activityViewModels()
 
     fun updateUiState() {
         when (mState) {
@@ -44,6 +48,10 @@ class PlayerFragment : Fragment(R.layout.fragment_player) {
         }
     }
 
+    fun setMetaData(s: String) {
+        tv_tracktitle.setText(s)
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         ib_savetracks.setOnClickListener {
             context?.run {
@@ -61,6 +69,8 @@ class PlayerFragment : Fragment(R.layout.fragment_player) {
         ib_stop.setOnClickListener {
             setPlayingState(PlaybackState.STOPPED)
         }
+
+        playbackState.metadata.observe(this, { s -> setMetaData(s) })
 
         updateUiState()
     }

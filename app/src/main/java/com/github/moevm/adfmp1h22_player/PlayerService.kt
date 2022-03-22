@@ -1,5 +1,7 @@
 package com.github.moevm.adfmp1h22_player
 
+import androidx.lifecycle.MutableLiveData
+
 import java.util.LinkedList
 
 import android.content.Context
@@ -57,6 +59,8 @@ class PlayerService : Service() {
 
     var mThread: PlayerThread? = null
     var mHandler: Handler? = null
+    val mMetaData = MutableLiveData<String>()
+    val mPlaybackState = MutableLiveData<PlaybackState>()
 
     class PlayerThread(
         private val userAgent: String,
@@ -528,7 +532,7 @@ class PlayerService : Service() {
 
     private fun onPlaybackStateChanged(ps: PlaybackState) {
         Log.d(TAG, "playback state: $ps")
-        // TODO: report to listeners
+        mPlaybackState.postValue(ps)
         // TODO: update notification
     }
 
@@ -576,11 +580,7 @@ class PlayerService : Service() {
             resources.getString(R.string.user_agent), sid,
             object : PlayerThread.Callback {
                 override fun onMetaData(s: String) {
-                    Toast.makeText(
-                        this@PlayerService, "RadioPlayer: $s",
-                        Toast.LENGTH_LONG,
-                    ).show()
-                    // TODO: report to listeners
+                    mMetaData.postValue(s)
                     // TODO: update notification
                     // TODO: update playback history
                 }

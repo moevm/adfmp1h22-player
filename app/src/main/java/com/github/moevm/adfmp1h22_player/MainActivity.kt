@@ -1,5 +1,7 @@
 package com.github.moevm.adfmp1h22_player
 
+import androidx.activity.viewModels
+
 import android.util.Log
 import android.widget.Toast
 import android.view.Menu
@@ -23,6 +25,8 @@ class MainActivity : AppCompatActivity() {
 
     // TODO: fun setPlaybackState (pause/resume, stop)
     // TODO: fun startPlayingStation (Station)
+
+    private val playbackModel: PlaybackModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -117,9 +121,16 @@ class MainActivity : AppCompatActivity() {
     inner class PlayerServiceConnection(
         private val action: (PlayerService) -> Unit
     ) : ServiceConnection {
-        override fun onServiceConnected(n: ComponentName, s: IBinder) {
-            mServiceBinder = s as PlayerService.PlayerServiceBinder
-            action(s.service)
+        override fun onServiceConnected(n: ComponentName, sb: IBinder) {
+            mServiceBinder = sb as PlayerService.PlayerServiceBinder
+            sb.service.mMetaData.observe(this@MainActivity) { s ->
+                Toast.makeText(
+                    this@MainActivity, "RadioPlayer: $s",
+                    Toast.LENGTH_LONG,
+                ).show()
+                playbackModel.metadata.setValue(s)
+            }
+            action(sb.service)
         }
 
         override fun onServiceDisconnected(n: ComponentName) {
