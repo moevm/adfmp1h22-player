@@ -36,17 +36,19 @@ class MainActivity : AppCompatActivity() {
             override fun getItemCount(): Int = 2
 
             override fun createFragment(pos: Int): Fragment = when (pos) {
-                0 -> PlayerFragment().also {
-                    it.onStopRequested = {
-                        withPlayerService {
-                            it.stopPlayback()
-                        }
+                0 -> PlayerFragment().also { f ->
+                    f.onStopRequested = {
+                        withPlayerService { it.stopPlayback() }
+                    }
+                    f.onPauseRequested = {
+                        withPlayerService { it.pausePlayback() }
+                    }
+                    f.onResumeRequested = {
+                        withPlayerService { it.resumePlayback() }
                     }
                 }
-                1 -> StationListFragment().also {
-                    it.onSetStation = { s: Station ->
-                        setPlayingStation(s)
-                    }
+                1 -> StationListFragment().also { f ->
+                    f.onSetStation = { setPlayingStation(it) }
                 }
                 else -> throw IllegalArgumentException("Invalid fragment index")
             }

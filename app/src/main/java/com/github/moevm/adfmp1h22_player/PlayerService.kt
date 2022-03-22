@@ -44,8 +44,8 @@ class PlayerService : Service() {
     companion object {
         val CMD_START_PLAYING_STATION = 0
         val CMD_STOP_PLAYBACK = 1
-        // val CMD_PAUSE_PLAYBACK = 2
-        // val CMD_RESUME_PLAYBACK = 3
+        val CMD_PAUSE_PLAYBACK = 2
+        val CMD_RESUME_PLAYBACK = 3
         val CMD_DEBUG_INFO = 10
 
         val TAG = "PlayerService"
@@ -54,7 +54,11 @@ class PlayerService : Service() {
 
         val MP3_SAMPLES_PER_FRAME = 1152
 
+        // Size of cache until we start dropping frames
         val MAX_CACHE_SECONDS = 5
+
+        // Normal size of cache. When dropping, keep it this full. When
+        // paused, keep cache at this size.
         val MAX_CACHE_SECONDS_SOFT = 3
     }
 
@@ -107,6 +111,7 @@ class PlayerService : Service() {
 
         private var decoder_codec: MediaCodec? = null
         private var player: AudioTrack? = null
+        private var paused: Boolean = false
 
         private var timestamp: Long = 0.toLong()
         private val metaqueue = LinkedList<MetaDataRecord>()
@@ -201,7 +206,11 @@ class PlayerService : Service() {
 
                                 buf.clear()
 
-                                val inf = bqueue.poll()
+                                // Keep the cache half-full when paused
+                                // to prevent draining on resume
+                                val can_give = !paused || bqueue.size >= max_frames_soft
+                                val inf = if (can_give) { bqueue.poll() }
+                                          else { null }
                                 if (inf != null) {
                                     if (inf.buf.remaining() <= buf.remaining()) {
                                         buf.put(inf.buf)
@@ -213,7 +222,7 @@ class PlayerService : Service() {
                                         Log.w(TAG, "onIBA: MediaCodec buffer too small")
                                     }
                                 } else {
-                                    if (!freelist.isEmpty()) {
+                                    if (bqueue.isEmpty() && !freelist.isEmpty()) {
                                         Log.w(TAG, "drained bqueue")
                                     }
                                 }
@@ -249,12 +258,14 @@ class PlayerService : Service() {
                                     return
                                 }
 
-                                player?.let { at ->
-                                    if (at.getPlayState() != AudioTrack.PLAYSTATE_PLAYING) {
-                                        Log.i(TAG, "starting playback")
-                                        at.play()
+                                if (!paused) {
+                                    player?.let { at ->
+                                        if (at.getPlayState() != AudioTrack.PLAYSTATE_PLAYING) {
+                                            Log.i(TAG, "starting playback")
+                                            at.play()
+                                        }
+                                        at.write(buf, buf.remaining(), AudioTrack.WRITE_BLOCKING)
                                     }
-                                    at.write(buf, buf.remaining(), AudioTrack.WRITE_BLOCKING)
                                 }
 
                                 mc.releaseOutputBuffer(index, false)
@@ -471,6 +482,16 @@ class PlayerService : Service() {
                     setupRequest(url)
                     true
                 }
+                CMD_PAUSE_PLAYBACK -> {
+                    paused = true
+                    cb.onPlaybackStateChanged(PlaybackState.PAUSED)
+                    true
+                }
+                CMD_RESUME_PLAYBACK -> {
+                    paused = false
+                    cb.onPlaybackStateChanged(PlaybackState.PLAYING)
+                    true
+                }
                 CMD_STOP_PLAYBACK -> {
 
                     // TODO: stop event loop from within itself. Try to
@@ -527,6 +548,20 @@ class PlayerService : Service() {
                 .sendToTarget()
         }
         stopSelf()
+    }
+
+    fun pausePlayback() {
+        mHandler?.let {
+            it.obtainMessage(CMD_PAUSE_PLAYBACK)
+                .sendToTarget()
+        }
+    }
+
+    fun resumePlayback() {
+        mHandler?.let {
+            it.obtainMessage(CMD_RESUME_PLAYBACK)
+                .sendToTarget()
+        }
     }
 
     fun logDebugInfo() {
