@@ -119,8 +119,8 @@ class MainActivity : AppCompatActivity() {
     ) : ServiceConnection {
         override fun onServiceConnected(n: ComponentName, sb: IBinder) {
             mServiceBinder = sb as PlayerService.PlayerServiceBinder
-            sb.service.mMetaData.observe(this@MainActivity) { s ->
-                playbackModel.metadata.setValue(s)
+            sb.service.mMetaData.observe(this@MainActivity) { m ->
+                playbackModel.metadata.setValue(m)
             }
             sb.service.mPlaybackState.observe(this@MainActivity) { stt ->
                 playbackModel.state.setValue(stt)

@@ -5,6 +5,6 @@ import androidx.lifecycle.ViewModel
 
 class PlaybackModel : ViewModel() {
     val station = MutableLiveData<Station>()
-    val metadata = MutableLiveData<String>()
+    val metadata = MutableLiveData<TrackMetaData>()
     val state = MutableLiveData<PlaybackState>(PlaybackState.STOPPED)
 }

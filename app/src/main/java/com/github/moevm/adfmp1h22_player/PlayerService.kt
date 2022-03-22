@@ -39,6 +39,20 @@ import android.content.Intent
 import android.app.Service
 
 
+fun parseTrackTitle(s: String): TrackMetaData {
+    val spl = s.split(" - ", limit=2)
+    return if (spl.size == 2) {
+        TrackMetaData(
+            s,
+            title=spl[1],
+            artist=spl[0],
+        )
+    } else {
+        TrackMetaData(s, s, null)
+    }
+}
+
+
 class PlayerService : Service() {
 
     companion object {
@@ -64,7 +78,7 @@ class PlayerService : Service() {
 
     var mThread: PlayerThread? = null
     var mHandler: Handler? = null
-    val mMetaData = MutableLiveData<String>()
+    val mMetaData = MutableLiveData<TrackMetaData>()
     val mPlaybackState = MutableLiveData<PlaybackState>()
 
     class PlayerThread(
@@ -74,7 +88,7 @@ class PlayerService : Service() {
     ) : HandlerThread("PlayerThread") {
 
         interface Callback {
-            fun onMetaData(s: String)
+            fun onMetaData(m: TrackMetaData)
             fun onPlaybackStateChanged(ps: PlaybackState)
             fun onError(e: Exception)
         }
@@ -248,8 +262,9 @@ class PlayerService : Service() {
 
                                 while (!metaqueue.isEmpty()
                                        && info.presentationTimeUs >= metaqueue.get(0).timestamp) {
-                                    val m = metaqueue.remove()
-                                    cb.onMetaData(m.meta)
+                                    val mp = metaqueue.remove()
+                                    val m = parseTrackTitle(mp.meta)
+                                    cb.onMetaData(m)
                                 }
 
                                 val buf = mc.getOutputBuffer(index)
@@ -620,8 +635,8 @@ class PlayerService : Service() {
         mThread = PlayerThread(
             resources.getString(R.string.user_agent), sid,
             object : PlayerThread.Callback {
-                override fun onMetaData(s: String) {
-                    mMetaData.postValue(s)
+                override fun onMetaData(m: TrackMetaData) {
+                    mMetaData.postValue(m)
                     // TODO: update notification
                     // TODO: update playback history
                 }

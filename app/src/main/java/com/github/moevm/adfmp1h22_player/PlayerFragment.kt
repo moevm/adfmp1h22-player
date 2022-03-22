@@ -41,6 +41,16 @@ class PlayerFragment : Fragment(R.layout.fragment_player) {
         }
     }
 
+    fun setStrings(title: String, artist: String?) {
+        tv_tracktitle.setText(title)
+        if (artist == null) {
+            tv_trackartist.setVisibility(View.INVISIBLE)
+        } else {
+            tv_trackartist.setText(artist)
+            tv_trackartist.setVisibility(View.VISIBLE)
+        }
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         ib_savetracks.setOnClickListener {
             context?.run {
@@ -62,8 +72,13 @@ class PlayerFragment : Fragment(R.layout.fragment_player) {
             onStopRequested?.let { it() }
         }
 
-        playbackModel.metadata.observe(viewLifecycleOwner) { s ->
-            tv_tracktitle.setText(s)
+        playbackModel.station.observe(viewLifecycleOwner) { station ->
+            if (station != null) {
+                setStrings(station.name, null)
+            }
+        }
+        playbackModel.metadata.observe(viewLifecycleOwner) { m ->
+            setStrings(m.title, m.artist)
         }
         playbackModel.state.observe(viewLifecycleOwner) {
             updateUiState()
