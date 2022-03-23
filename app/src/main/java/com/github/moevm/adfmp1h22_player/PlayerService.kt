@@ -80,7 +80,11 @@ class PlayerService : Service() {
         // Normal size of cache. When dropping, keep it this full. When
         // paused, keep cache at this size.
         val MAX_CACHE_SECONDS_SOFT = 3
+
+        val IDLE_TIMEOUT = 10000.toLong() // ms
     }
+
+    class TerminationMarker : Throwable()
 
     var mThread: PlayerThread? = null
     var mHandler: Handler? = null
@@ -96,6 +100,10 @@ class PlayerService : Service() {
         interface Callback {
             fun onMetaData(m: TrackMetaData)
             fun onPlaybackStateChanged(ps: PlaybackState)
+
+            // TODO: some kind of details enum to specify kind of error
+            // -- e.g. unknown format, unsupported transport, network
+            // unreachable, connection refused, programming error
             fun onError(e: Throwable)
         }
 
@@ -117,7 +125,7 @@ class PlayerService : Service() {
         private lateinit var hc: HttpClient
         private lateinit var handler: Handler
 
-        private var http_connection: Connection? = null
+        private var http_ks: (() -> Unit)? = null
 
         private var metaint: Int? = null
         private var content_type: String? = null
@@ -132,10 +140,10 @@ class PlayerService : Service() {
         private var current_meta: String? = null
 
         private var decoder_codec: MediaCodec? = null
+        private var decoder_ks: (() -> Unit)? = null
         private var player: AudioTrack? = null
         private var paused: Boolean = false
 
-        private var timestamp: Long = 0.toLong()
         private val metaqueue = LinkedList<MetaDataRecord>()
         private var sample_rate: Int = -1
         private var max_frames: Int = 0
@@ -143,11 +151,45 @@ class PlayerService : Service() {
 
         private var stat_allocated_buffers: Int = 0
         private var stat_dropped_buffers: Int = 0
+        private var stat_small_buffer: Int = 0
 
         fun reset() {
             metaint = null
             content_type = null
             decoder = null
+
+            current_frame?.let {
+                it.clear()
+                freelist.add(it)
+            }
+            current_frame = null
+            while (true) {
+                val x = bqueue.poll()
+                if (x == null) {
+                    break
+                }
+                x.clear()
+                freelist.add(x)
+            }
+
+            paused = false
+
+            player?.release()
+            player = null
+
+            decoder_ks?.let { it() }
+            decoder_ks = null
+            decoder_codec = null
+
+            http_ks?.let { it() }
+            http_ks = null
+
+            metaqueue.clear()
+            current_meta = null
+
+            sample_rate = -1
+            max_frames = 0
+            max_frames_soft = 0
         }
 
         private fun setupPlayer(fmt: MediaFormat) {
@@ -206,6 +248,8 @@ class PlayerService : Service() {
                         "audio/mpeg",
                         freq, channels,
                     )
+                    var endflag = false
+                    var timestamp = 0.toLong()
                     mc.setCallback(
                         object : MediaCodec.Callback() {
                             override fun onError(
@@ -227,6 +271,12 @@ class PlayerService : Service() {
                                 }
 
                                 buf.clear()
+
+                                if (endflag) {
+                                    mc.queueInputBuffer(index, 0, 0, timestamp,
+                                                        MediaCodec.BUFFER_FLAG_END_OF_STREAM)
+                                    return
+                                }
 
                                 // Keep the cache half-full when paused
                                 // to prevent draining on resume
@@ -263,6 +313,12 @@ class PlayerService : Service() {
                                 index: Int,
                                 info: MediaCodec.BufferInfo,
                             ) {
+
+                                if (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) {
+                                    mc.releaseOutputBuffer(index, false)
+                                    mc.release()
+                                    return
+                                }
 
                                 if (info.size == 0) {
                                     return
@@ -307,6 +363,7 @@ class PlayerService : Service() {
                     mc.configure(fmt, null, null, 0)
                     mc.start()
                     decoder_codec = mc
+                    decoder_ks = { endflag = true }
                     true
                 }
                 else -> false
@@ -314,6 +371,9 @@ class PlayerService : Service() {
         }
 
         private fun setupRequest(req: Request) {
+            var tostop = false
+            http_ks = { tostop = true }
+
             req
                 .header("icy-metadata", "1")
                 .agent(userAgent)
@@ -363,9 +423,9 @@ class PlayerService : Service() {
                                         if (f == null || f.buf.capacity() >= frame_len) {
                                             f?.clear()
                                             frm = f
-                                            break;
+                                            break
                                         } else {
-                                            Log.w(TAG, "buffer {f.buf.capacity()} too small for ${frame_len}b frame")
+                                            stat_small_buffer++
                                         }
                                     }
                                     if (frm == null) {
@@ -473,59 +533,46 @@ class PlayerService : Service() {
 
                     decoder = fsm
                 }
-                .onResponseContent { _, c ->
-                    decoder!!.step(c)
+                .onResponseContent { r, buf ->
+                    if (tostop) {
+                        r.abort(TerminationMarker())
+                    } else {
+                        decoder!!.step(buf)
+                    }
                 }
         }
 
         private fun startPlayingUrl(url: String) {
             reset()
             Log.d(TAG, "Playing URL: $url")
-            val u = URL(url)
-            var port = u.getPort()
-            if (port < 0) {
-                port = u.getDefaultPort()
-            }
-            val o = Origin(u.getProtocol(), u.getHost(), port)
-            val dest = hc.resolveDestination(o)
-            dest.newConnection(
-                object : Promise<Connection> {
-                    override fun succeeded(c: Connection) {
-                        http_connection = c
-
-                        val req = hc.newRequest(u.toURI())
-                        setupRequest(req)
-                        c.send(req) { r ->
-                            handler.post {
-                                c.close()
-                                http_connection = null
-
-                                if (r.isFailed()) {
-                                    try {
-                                        Log.w(TAG, "http failed")
-                                        r.getRequestFailure()?.let {
-                                            Log.d(TAG, "req  fail: ${it.toString()}", it)
-                                        }
-                                        r.getResponseFailure()?.let {
-                                            Log.d(TAG, "resp fail: ${it.toString()}", it)
-                                        }
-                                    } catch (e: Exception) {
-                                        Log.d(TAG, "exception while handling request failure", e)
-                                    }
-                                }
+            val req = hc.newRequest(url)
+            setupRequest(req)
+            req.send { r ->
+                handler.post {
+                    if (r.getRequestFailure() == null
+                        && r.getResponseFailure() is TerminationMarker) {
+                        Log.i(TAG, "HTTP Response terminated")
+                        return@post
+                    } else if (r.isFailed()) {
+                        try {
+                            Log.w(TAG, "http failed")
+                            r.getRequestFailure()?.let {
+                                Log.d(TAG, "req  fail: ${it.toString()}", it)
+                                cb.onError(it)
                             }
+                            r.getResponseFailure()?.let {
+                                Log.d(TAG, "resp fail: ${it.toString()}", it)
+                                cb.onError(it)
+                            }
+                        } catch (e: Exception) {
+                            Log.d(TAG, "exception while handling request failure", e)
+                            cb.onError(e)
                         }
                     }
 
-                    override fun failed(t: Throwable) {
-                        handler.post {
-                            Log.e(TAG, "HTTP connection failed", t)
-                            cb.onError(t)
-                            looper.quitSafely()
-                        }
-                    }
+                    looper.quitSafely()
                 }
-            )
+            }
         }
 
         fun handleMessage(msg: Message): Boolean {
@@ -553,6 +600,8 @@ class PlayerService : Service() {
                     Log.d(TAG, "sizes: bqueue:${bqueue.size} freelist:${freelist.size}")
                     Log.d(TAG, "allocated buffers: ${stat_allocated_buffers}")
                     Log.d(TAG, "dropped buffers  : ${stat_dropped_buffers}")
+                    Log.d(TAG, "queue limits     : ${max_frames_soft} soft / ${max_frames} hard")
+                    Log.d(TAG, "buffer too small : ${stat_small_buffer}")
                     true
                 }
                 else -> false
@@ -561,6 +610,7 @@ class PlayerService : Service() {
 
         override fun run() {
             hc = HttpClient()
+            hc.setIdleTimeout(IDLE_TIMEOUT)
             hc.start()
             cb.onPlaybackStateChanged(PlaybackState.LOADING)
             try {
@@ -571,13 +621,9 @@ class PlayerService : Service() {
             }
             Log.d(TAG, "out of looper")
 
-            player?.release()
-            decoder_codec?.release()
-            http_connection?.close()
-
+            reset()
             bqueue.clear()
             freelist.clear()
-            metaqueue.clear()
 
             hc.stop()
             cb.onPlaybackStateChanged(PlaybackState.STOPPED)
@@ -709,6 +755,7 @@ class PlayerService : Service() {
         mThread?.let {
             it.join(1000)       // wait 1sec
             if (it.isAlive()) {
+                Log.w(TAG, "failed to join thread")
                 it.interrupt()
                 it.join()
             }
