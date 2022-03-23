@@ -77,8 +77,7 @@ class PlayerService : Service() {
         // Size of cache until we start dropping frames
         val MAX_CACHE_SECONDS = 5
 
-        // Normal size of cache. When dropping, keep it this full. When
-        // paused, keep cache at this size.
+        // Normal size of cache. When dropping, keep it this full
         val MAX_CACHE_SECONDS_SOFT = 3
 
         val IDLE_TIMEOUT = 10000.toLong() // ms
@@ -142,7 +141,7 @@ class PlayerService : Service() {
         private var decoder_codec: MediaCodec? = null
         private var decoder_ks: (() -> Unit)? = null
         private var player: AudioTrack? = null
-        private var paused: Boolean = false
+        private var paused_bufsize: Int? = null
 
         private val metaqueue = LinkedList<MetaDataRecord>()
         private var sample_rate: Int = -1
@@ -172,7 +171,7 @@ class PlayerService : Service() {
                 freelist.add(x)
             }
 
-            paused = false
+            paused_bufsize = null
 
             player?.release()
             player = null
@@ -278,9 +277,11 @@ class PlayerService : Service() {
                                     return
                                 }
 
-                                // Keep the cache half-full when paused
-                                // to prevent draining on resume
-                                val can_give = !paused || bqueue.size >= max_frames_soft
+                                // Keep cache volume when paused to
+                                // prevent draining on resume and keep
+                                // delay from before entering pause
+                                val ps = paused_bufsize
+                                val can_give = ps == null || bqueue.size > ps
                                 val inf = if (can_give) { bqueue.poll() }
                                           else { null }
                                 if (inf != null) {
@@ -337,7 +338,7 @@ class PlayerService : Service() {
                                     return
                                 }
 
-                                if (!paused) {
+                                if (paused_bufsize == null) {
                                     player?.let { at ->
                                         if (at.getPlayState() != AudioTrack.PLAYSTATE_PLAYING) {
                                             Log.i(TAG, "starting playback")
@@ -465,8 +466,8 @@ class PlayerService : Service() {
                                             current_frame = null
 
                                             val bqsz = bqueue.size
-                                            var ndrop = 0
-                                            if (bqsz - ndrop > max_frames) {
+                                            if (bqsz > max_frames) {
+                                                var ndrop = 0
                                                 while (bqsz - ndrop > max_frames_soft) {
                                                     ndrop++
                                                     bqueue.poll()?.let { f ->
@@ -477,8 +478,6 @@ class PlayerService : Service() {
                                                     }
                                                     stat_dropped_buffers++
                                                 }
-                                            }
-                                            if (ndrop > 0) {
                                                 Log.w(TAG, "dropped $ndrop frames")
                                             }
                                         } else {
@@ -583,12 +582,13 @@ class PlayerService : Service() {
                     true
                 }
                 CMD_PAUSE_PLAYBACK -> {
-                    paused = true
+                    val sz = bqueue.size
+                    paused_bufsize = if (sz >= max_frames) max_frames-1 else sz
                     cb.onPlaybackStateChanged(PlaybackState.PAUSED)
                     true
                 }
                 CMD_RESUME_PLAYBACK -> {
-                    paused = false
+                    paused_bufsize = null
                     cb.onPlaybackStateChanged(PlaybackState.PLAYING)
                     true
                 }
