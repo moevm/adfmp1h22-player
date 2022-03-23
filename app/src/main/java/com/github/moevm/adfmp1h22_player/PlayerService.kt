@@ -1,5 +1,11 @@
 package com.github.moevm.adfmp1h22_player
 
+import org.eclipse.jetty.util.Promise
+import org.eclipse.jetty.client.api.Request
+import org.eclipse.jetty.client.api.Connection
+import org.eclipse.jetty.client.Origin
+import java.net.URL
+
 import androidx.lifecycle.MutableLiveData
 
 import java.util.LinkedList
@@ -90,7 +96,7 @@ class PlayerService : Service() {
         interface Callback {
             fun onMetaData(m: TrackMetaData)
             fun onPlaybackStateChanged(ps: PlaybackState)
-            fun onError(e: Exception)
+            fun onError(e: Throwable)
         }
 
         private class Frame(
@@ -110,6 +116,8 @@ class PlayerService : Service() {
 
         private lateinit var hc: HttpClient
         private lateinit var handler: Handler
+
+        private var http_connection: Connection? = null
 
         private var metaint: Int? = null
         private var content_type: String? = null
@@ -305,9 +313,8 @@ class PlayerService : Service() {
             }
         }
 
-        private fun setupRequest(url: String) {
-            reset()
-            hc.newRequest(url)
+        private fun setupRequest(req: Request) {
+            req
                 .header("icy-metadata", "1")
                 .agent(userAgent)
                 .onResponseHeader { _, f ->
@@ -469,32 +476,63 @@ class PlayerService : Service() {
                 .onResponseContent { _, c ->
                     decoder!!.step(c)
                 }
-                .send { r ->
-                    handler.post {
-                        player?.release()
-                        decoder_codec?.release()
-                        if (r.isFailed()) {
-                            try {
-                                Log.w(TAG, "http failed")
-                                r.getRequestFailure()?.let {
-                                    Log.d(TAG, "req  fail: ${it.toString()}", it)
+        }
+
+        private fun startPlayingUrl(url: String) {
+            reset()
+            Log.d(TAG, "Playing URL: $url")
+            val u = URL(url)
+            var port = u.getPort()
+            if (port < 0) {
+                port = u.getDefaultPort()
+            }
+            val o = Origin(u.getProtocol(), u.getHost(), port)
+            val dest = hc.resolveDestination(o)
+            dest.newConnection(
+                object : Promise<Connection> {
+                    override fun succeeded(c: Connection) {
+                        http_connection = c
+
+                        val req = hc.newRequest(u.toURI())
+                        setupRequest(req)
+                        c.send(req) { r ->
+                            handler.post {
+                                c.close()
+                                http_connection = null
+
+                                if (r.isFailed()) {
+                                    try {
+                                        Log.w(TAG, "http failed")
+                                        r.getRequestFailure()?.let {
+                                            Log.d(TAG, "req  fail: ${it.toString()}", it)
+                                        }
+                                        r.getResponseFailure()?.let {
+                                            Log.d(TAG, "resp fail: ${it.toString()}", it)
+                                        }
+                                    } catch (e: Exception) {
+                                        Log.d(TAG, "exception while handling request failure", e)
+                                    }
                                 }
-                                r.getResponseFailure()?.let {
-                                    Log.d(TAG, "resp fail: ${it.toString()}", it)
-                                }
-                            } catch (e: Exception) {
-                                Log.d(TAG, "exception while handling request failure", e)
                             }
                         }
                     }
+
+                    override fun failed(t: Throwable) {
+                        handler.post {
+                            Log.e(TAG, "HTTP connection failed", t)
+                            cb.onError(t)
+                            looper.quitSafely()
+                        }
+                    }
                 }
+            )
         }
 
         fun handleMessage(msg: Message): Boolean {
             return when (msg.what) {
                 CMD_START_PLAYING_STATION -> {
                     val url = msg.obj as String
-                    setupRequest(url)
+                    startPlayingUrl(url)
                     true
                 }
                 CMD_PAUSE_PLAYBACK -> {
@@ -508,15 +546,7 @@ class PlayerService : Service() {
                     true
                 }
                 CMD_STOP_PLAYBACK -> {
-
-                    // TODO: stop event loop from within itself. Try to
-                    // join thread in onDestroy and force quit on
-                    // failure.
-
-                    // TODO: try to gracefully shut down the request.
-                    // This should be possible if we create the
-                    // connection ourselves.
-
+                    looper.quitSafely()
                     true
                 }
                 CMD_DEBUG_INFO -> {
@@ -536,11 +566,22 @@ class PlayerService : Service() {
             try {
                 super.run()
             } catch (e: Exception) {
-                Log.e(TAG, "Uncaught exception in PlayerThread")
+                Log.e(TAG, "Uncaught exception in PlayerThread", e)
                 cb.onError(e)
             }
+            Log.d(TAG, "out of looper")
+
+            player?.release()
+            decoder_codec?.release()
+            http_connection?.close()
+
+            bqueue.clear()
+            freelist.clear()
+            metaqueue.clear()
+
             hc.stop()
             cb.onPlaybackStateChanged(PlaybackState.STOPPED)
+            Log.d(TAG, "Stopping PlayerThread")
         }
 
         override protected fun onLooperPrepared() {
@@ -562,7 +603,6 @@ class PlayerService : Service() {
             it.obtainMessage(CMD_STOP_PLAYBACK)
                 .sendToTarget()
         }
-        stopSelf()
     }
 
     fun pausePlayback() {
@@ -590,6 +630,9 @@ class PlayerService : Service() {
         Log.d(TAG, "playback state: $ps")
         mPlaybackState.postValue(ps)
         // TODO: update notification
+        if (ps == PlaybackState.STOPPED) {
+            stopSelf()
+        }
     }
 
     inner class PlayerServiceBinder : Binder() {
@@ -645,7 +688,7 @@ class PlayerService : Service() {
                     this@PlayerService.onPlaybackStateChanged(ps)
                 }
 
-                override fun onError(e: Exception) {
+                override fun onError(e: Throwable) {
                     Toast.makeText(
                         this@PlayerService, "RadioPlayer: Uncaught exception in player service",
                         Toast.LENGTH_LONG,
@@ -664,8 +707,11 @@ class PlayerService : Service() {
 
     override fun onDestroy() {
         mThread?.let {
-            it.looper.quitSafely()
-            it.join()
+            it.join(1000)       // wait 1sec
+            if (it.isAlive()) {
+                it.interrupt()
+                it.join()
+            }
             mThread = null
         }
     }
