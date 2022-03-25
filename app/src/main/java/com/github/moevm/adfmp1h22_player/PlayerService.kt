@@ -85,8 +85,8 @@ class PlayerService : Service() {
 
     class TerminationMarker : Throwable()
 
-    var mThread: PlayerThread? = null
-    var mHandler: Handler? = null
+    lateinit var mThread: PlayerThread
+    lateinit var mHandler: Handler
     val mMetaData = MutableLiveData<TrackMetaData>()
     val mPlaybackState = MutableLiveData<PlaybackState>()
 
@@ -493,9 +493,6 @@ class PlayerService : Service() {
                         )
                         else -> {
                             Log.e(TAG, "aborting, content-type: $content_type")
-
-                            // TODO: I don’t think the abort will work
-
                             r.abort(Exception("Unsupported format $content_type"))
                             return@onResponseHeaders
                         }
@@ -636,40 +633,30 @@ class PlayerService : Service() {
     }
 
     fun startPlayingStation(s: Station) {
-        mHandler?.let {
-            it.obtainMessage(
-                CMD_START_PLAYING_STATION,
-                s.streamUrl,
-            ).sendToTarget()
-        }
+        mHandler.obtainMessage(
+            CMD_START_PLAYING_STATION,
+            s.streamUrl,
+        ).sendToTarget()
     }
 
     fun stopPlayback() {
-        mHandler?.let {
-            it.obtainMessage(CMD_STOP_PLAYBACK)
-                .sendToTarget()
-        }
+        mHandler.obtainMessage(CMD_STOP_PLAYBACK)
+            .sendToTarget()
     }
 
     fun pausePlayback() {
-        mHandler?.let {
-            it.obtainMessage(CMD_PAUSE_PLAYBACK)
-                .sendToTarget()
-        }
+        mHandler.obtainMessage(CMD_PAUSE_PLAYBACK)
+            .sendToTarget()
     }
 
     fun resumePlayback() {
-        mHandler?.let {
-            it.obtainMessage(CMD_RESUME_PLAYBACK)
-                .sendToTarget()
-        }
+        mHandler.obtainMessage(CMD_RESUME_PLAYBACK)
+            .sendToTarget()
     }
 
     fun logDebugInfo() {
-        mHandler?.let {
-            it.obtainMessage(CMD_DEBUG_INFO)
-                .sendToTarget()
-        }
+        mHandler.obtainMessage(CMD_DEBUG_INFO)
+            .sendToTarget()
     }
 
     private fun onPlaybackStateChanged(ps: PlaybackState) {
@@ -742,24 +729,20 @@ class PlayerService : Service() {
                     // We’ll get an onPlaybackStateChanged as well
                 }
             }
-        ).also { thread ->
-            thread.start()
-            mHandler = Handler(thread.looper, thread::handleMessage)
-        }
+        )
+        mThread.start()
+        mHandler = Handler(mThread.looper, mThread::handleMessage)
 
         val notif = makeNotification()
         startForeground(NOTIF_ID, notif)
     }
 
     override fun onDestroy() {
-        mThread?.let {
-            it.join(1000)       // wait 1sec
-            if (it.isAlive()) {
-                Log.w(TAG, "failed to join thread")
-                it.interrupt()
-                it.join()
-            }
-            mThread = null
+        mThread.join(1000)       // wait 1sec
+        if (mThread.isAlive()) {
+            Log.w(TAG, "failed to join thread")
+            mThread.interrupt()
+            mThread.join()
         }
     }
 }
