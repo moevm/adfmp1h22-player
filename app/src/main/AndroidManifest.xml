@@ -46,6 +46,9 @@
         <service
             android:name=".PlayerService"
             android:exported="false" />
+        <service
+            android:name=".RecordingManagerService"
+            android:exported="false" />
     </application>
 
 </manifest>

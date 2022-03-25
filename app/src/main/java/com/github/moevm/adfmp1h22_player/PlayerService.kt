@@ -1,5 +1,11 @@
 package com.github.moevm.adfmp1h22_player
 
+import java.nio.file.Files
+import java.nio.file.StandardOpenOption
+
+import android.content.ComponentName
+import android.content.ServiceConnection
+
 import org.eclipse.jetty.util.Promise
 import org.eclipse.jetty.client.api.Request
 import org.eclipse.jetty.client.api.Connection
@@ -67,6 +73,7 @@ class PlayerService : Service() {
         val CMD_PAUSE_PLAYBACK = 2
         val CMD_RESUME_PLAYBACK = 3
         val CMD_DEBUG_INFO = 10
+        val CMD_SET_RECMSG_SERVICE = 20
 
         val TAG = "PlayerService"
         val NOTIF_CHANNEL_ID = "main"
@@ -142,6 +149,8 @@ class PlayerService : Service() {
         private var decoder_ks: (() -> Unit)? = null
         private var player: AudioTrack? = null
         private var paused_bufsize: Int? = null
+
+        private var recmgr: RecordingManagerService? = null
 
         private val metaqueue = LinkedList<MetaDataRecord>()
         private var sample_rate: Int = -1
@@ -330,6 +339,30 @@ class PlayerService : Service() {
                                     val mp = metaqueue.remove()
                                     val m = parseTrackTitle(mp.meta)
                                     cb.onMetaData(m)
+
+                                    // TODO: if first metadata string,
+                                    // we may be joining in the middle
+                                    // of a song. Shortwave drops the
+                                    // first song, should we?
+
+                                    // TODO: move into separate class?
+                                    Log.d(TAG, "have new metadata for recording")
+                                    recmgr?.let {
+                                        Log.d(TAG, "have recmgr")
+                                        it.requestNewRecording(m) { r ->
+                                            Log.d(TAG, "requestNewRecording fired")
+                                            val fn = it.recordingPath(r)
+                                            val chan = Files.newByteChannel(
+                                                fn,
+                                                StandardOpenOption.WRITE,
+                                                StandardOpenOption.CREATE
+                                            )
+                                            chan.write(ByteBuffer.wrap(m.original.toByteArray()))
+                                            chan.close()
+                                            Log.d(TAG, "write done")
+                                            // TODO: notifyRecordingFinished
+                                        }
+                                    }
                                 }
 
                                 val buf = mc.getOutputBuffer(index)
@@ -601,6 +634,12 @@ class PlayerService : Service() {
                     Log.d(TAG, "buffer too small : ${stat_small_buffer}")
                     true
                 }
+                CMD_SET_RECMSG_SERVICE -> {
+                    recmgr = msg.obj as RecordingManagerService
+                    Log.d(TAG, "received recmgr")
+                    // TODO: we may have a track playing and buffers accumulating
+                    true
+                }
                 else -> false
             }
         }
@@ -732,6 +771,24 @@ class PlayerService : Service() {
         )
         mThread.start()
         mHandler = Handler(mThread.looper, mThread::handleMessage)
+
+        bindService(
+            Intent(this, RecordingManagerService::class.java),
+            object : ServiceConnection {
+                override fun onServiceConnected(m: ComponentName, sb: IBinder) {
+                    Log.i(TAG, "Service connected: $m")
+                    val b = sb as RecordingManagerService.ServiceBinder
+                    Log.d(TAG, "bind completed")
+                    mHandler.obtainMessage(CMD_SET_RECMSG_SERVICE, b.service)
+                        .sendToTarget()
+                }
+
+                override fun onServiceDisconnected(m: ComponentName) {
+                    Log.w(TAG, "Service disconnected: $m")
+                }
+            },
+            Context.BIND_AUTO_CREATE
+        )
 
         val notif = makeNotification()
         startForeground(NOTIF_ID, notif)
