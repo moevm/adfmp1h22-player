@@ -23,9 +23,6 @@ class MainActivity : AppCompatActivity() {
 
     private var current_station: Station? = null
 
-    // TODO: fun setPlaybackState (pause/resume, stop)
-    // TODO: fun startPlayingStation (Station)
-
     private val playbackModel: PlaybackModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {

@@ -112,6 +112,10 @@ class RecordingManagerService : Service() {
         m.sendToTarget()
     }
 
+    // TODO: finishRecording
+    // TODO: saveRecording
+    // TODO: cleanUpRecordings
+
     fun recordingPath(r: Recording): Path {
         return Paths.get(mStorageDir, PATH_PREFIX, r.uuid.toString());
     }

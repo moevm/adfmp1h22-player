@@ -1,6 +1,6 @@
 package com.github.moevm.adfmp1h22_player
 
-import java.nio.file.Files
+import java.nio.channels.AsynchronousFileChannel
 import java.nio.file.StandardOpenOption
 
 import android.content.ComponentName
@@ -151,6 +151,7 @@ class PlayerService : Service() {
         private var paused_bufsize: Int? = null
 
         private var recmgr: RecordingManagerService? = null
+        private var streamrec: StreamRecorder? = null
 
         private val metaqueue = LinkedList<MetaDataRecord>()
         private var sample_rate: Int = -1
@@ -181,6 +182,9 @@ class PlayerService : Service() {
             }
 
             paused_bufsize = null
+
+            streamrec?.onStop()
+            streamrec = null
 
             player?.release()
             player = null
@@ -293,6 +297,7 @@ class PlayerService : Service() {
                                 val can_give = ps == null || bqueue.size > ps
                                 val inf = if (can_give) { bqueue.poll() }
                                           else { null }
+                                val t = timestamp
                                 if (inf != null) {
                                     if (inf.buf.remaining() <= buf.remaining()) {
                                         buf.put(inf.buf)
@@ -300,6 +305,8 @@ class PlayerService : Service() {
                                             metaqueue.add(MetaDataRecord(timestamp, it))
                                         }
                                         freelist.add(inf)
+
+                                        timestamp += MP3_SAMPLES_PER_FRAME * 1000000 / sample_rate
                                     } else {
                                         Log.w(TAG, "onIBA: MediaCodec buffer too small")
                                     }
@@ -312,10 +319,7 @@ class PlayerService : Service() {
                                 val n = buf.position()
                                 buf.rewind()
 
-                                mc.queueInputBuffer(index, 0, n, timestamp, 0)
-
-                                timestamp += MP3_SAMPLES_PER_FRAME * 1000000 / sample_rate
-
+                                mc.queueInputBuffer(index, 0, n, t, 0)
                             }
 
                             override fun onOutputBufferAvailable(
@@ -327,6 +331,7 @@ class PlayerService : Service() {
                                 if (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) {
                                     mc.releaseOutputBuffer(index, false)
                                     mc.release()
+                                    // TODO: stream recorder onStop
                                     return
                                 }
 
@@ -345,22 +350,15 @@ class PlayerService : Service() {
                                     // of a song. Shortwave drops the
                                     // first song, should we?
 
+                                    // TODO: use streamrec
+
                                     // TODO: move into separate class?
                                     Log.d(TAG, "have new metadata for recording")
                                     recmgr?.let {
                                         Log.d(TAG, "have recmgr")
                                         it.requestNewRecording(m) { r ->
                                             Log.d(TAG, "requestNewRecording fired")
-                                            val fn = it.recordingPath(r)
-                                            val chan = Files.newByteChannel(
-                                                fn,
-                                                StandardOpenOption.WRITE,
-                                                StandardOpenOption.CREATE
-                                            )
-                                            chan.write(ByteBuffer.wrap(m.original.toByteArray()))
-                                            chan.close()
-                                            Log.d(TAG, "write done")
-                                            // TODO: notifyRecordingFinished
+                                            streamrec!!.onNewTrack(r)
                                         }
                                     }
                                 }
@@ -378,8 +376,11 @@ class PlayerService : Service() {
                                             at.play()
                                         }
                                         at.write(buf, buf.remaining(), AudioTrack.WRITE_BLOCKING)
+                                        buf.rewind()
                                     }
                                 }
+
+                                streamrec!!.onPCMBuffer(info.presentationTimeUs, buf.slice())
 
                                 mc.releaseOutputBuffer(index, false)
                             }
@@ -571,11 +572,45 @@ class PlayerService : Service() {
                 }
         }
 
+        private fun setupStreamRecorder() {
+            val srec = StreamRecorder(
+                handler,
+                object : StreamRecorder.Callback {
+                    override fun onOpenChannel(r: Recording): AsynchronousFileChannel {
+                        val rm = recmgr
+                        if (rm == null) {
+                            throw Exception("onOpenChannel: no recmgr")
+                        }
+                        val fn = rm.recordingPath(r)
+                        return AsynchronousFileChannel.open(
+                            fn,
+                            StandardOpenOption.WRITE,
+                            StandardOpenOption.CREATE
+                        )
+                    }
+
+                    override fun onTrackDone(r: Recording, chan: AsynchronousFileChannel) {
+                        // TODO: log
+                        chan.close()
+                        // TODO: recmgr: notifyRecordingFinished
+                    }
+
+                    override fun onStop() {
+                        // TODO: not called
+                        Log.i(TAG, "StreamRecorder stopped")
+                    }
+                }
+            )
+            streamrec?.onStop()
+            streamrec = srec
+        }
+
         private fun startPlayingUrl(url: String) {
             reset()
             Log.d(TAG, "Playing URL: $url")
             val req = hc.newRequest(url)
             setupRequest(req)
+            setupStreamRecorder()
             req.send { r ->
                 handler.post {
                     if (r.getRequestFailure() == null
@@ -623,6 +658,8 @@ class PlayerService : Service() {
                     true
                 }
                 CMD_STOP_PLAYBACK -> {
+                    // TODO: wait stream recorder stop
+                    // TODO: actually wait until decoder etc stop
                     looper.quitSafely()
                     true
                 }
