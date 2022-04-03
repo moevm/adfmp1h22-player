@@ -34,14 +34,6 @@ class StreamRecorder(
         val TAG = "StreamRecorder"
     }
 
-    // TODO
-    //
-    // Figure out what exactly we’re getting:
-    // - How AAC frames look like
-    // - How containers look like
-    // - Are we getting AAC in a container
-    // - What players expect, how playable files look like
-
     interface Callback {
         fun onOpenChannel(r: Recording): AsynchronousFileChannel
         fun onTrackDone(r: Recording, chan: AsynchronousFileChannel)
@@ -103,9 +95,6 @@ class StreamRecorder(
             t.pos += n.toLong()
 
             val b = chanbusyslot
-
-            Log.d(TAG, "WD busy $b")
-
             if (b == null) {
                 Log.w(TAG, "onWriteDone: busy slot empty")
                 return@post
@@ -140,8 +129,6 @@ class StreamRecorder(
     }
 
     private fun maybeDoOutput() {
-        Log.d(TAG, "maybeDoOutput")
-
         if (chanbusyslot != null || chanqueue.isEmpty()) {
             return
         }
@@ -151,8 +138,6 @@ class StreamRecorder(
             Log.w(TAG, "track is null in maybeDoOutput")
             return
         }
-
-        Log.d(TAG, "chanqueue/2: ${chanqueue.size}")
 
         // NOTE: not poll() because null is an end flag
         val b = chanqueue.remove()
@@ -164,7 +149,6 @@ class StreamRecorder(
             startNextTrack()
         } else {
             chanbusyslot = b
-            Log.d(TAG, "DO busy $b")
             t.chan.write(b, t.pos, this, ComplHandler())
         }
     }
@@ -220,11 +204,11 @@ class StreamRecorder(
             if (ib != null) {
 
                 if (ib.endflag) {
+                    Log.i(TAG, "onIBA: seeing end flag")
                     mc.queueInputBuffer(index, 0, 0, 0,
                                          MediaCodec.BUFFER_FLAG_END_OF_STREAM)
                     encfreelist.add(ib)
                 } else {
-                    Log.d(TAG, "bufs: ${buf.remaining()}, want ${ib.buf.remaining()}")
                     buf.put(ib.buf)
                     ib.buf.clear()
                     encfreelist.add(ib)
@@ -250,6 +234,7 @@ class StreamRecorder(
             info: MediaCodec.BufferInfo,
         ) {
             if (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) {
+                Log.i(TAG, "onOBA: enqueue end flag")
                 mc.releaseOutputBuffer(index, false)
                 chanqueue.add(null)
                 maybeDoOutput()
@@ -271,13 +256,11 @@ class StreamRecorder(
             val b = getChanBuffer(buf.remaining() + 7)
             writeADTSHeader(b, buf.remaining() + 7)
             b.put(buf)
+            b.flip()
 
             mc.releaseOutputBuffer(index, false)
 
-            b.flip()
-
-            Log.d(TAG, "onOBA: b=$b")
-
+            Log.d(TAG, "onOutputBufAvail ${chanqueue.size}/${chanfreelist.size}")
             chanqueue.add(b)
             maybeDoOutput()
         }
@@ -300,6 +283,9 @@ class StreamRecorder(
             44100, 2,
         )
         fmt.setInteger(MediaFormat.KEY_BIT_RATE, 128*1000)
+
+        // TODO: don’t start recorder until we know the PCM format, i.e.
+        // until the decoder is initialized.
         fmt.setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, 4608)
         fmt.setInteger(MediaFormat.KEY_AAC_PROFILE,
                        MediaCodecInfo.CodecProfileLevel.AACObjectLC)
@@ -307,14 +293,6 @@ class StreamRecorder(
         var e = enc
         if (e == null) {
             val mcl = MediaCodecList(MediaCodecList.ALL_CODECS)
-            for (c in mcl.getCodecInfos().asSequence().filter {
-                     x -> x.isEncoder()
-            }) {
-                Log.d(TAG, "encoder ${c.name} cn ${c.canonicalName}isVendor=${c.isVendor()}")
-                for (t in c.supportedTypes) {
-                    Log.d(TAG, "  type $t")
-                }
-            }
             val mcn = mcl.findEncoderForFormat(fmt)
             Log.i(TAG, "creating codec name $mcn")
             e = MediaCodec.createByCodecName(mcn)
@@ -325,7 +303,7 @@ class StreamRecorder(
         }
         e.configure(fmt, null, null,
                     MediaCodec.CONFIGURE_FLAG_ENCODE)
-        Log.d(TAG, "enc input fmt: ${e.inputFormat}")
+        Log.i(TAG, "enc input fmt: ${e.inputFormat}")
         e.start()
 
     }
