@@ -670,6 +670,7 @@ class PlayerService : Service() {
                     Log.d(TAG, "dropped buffers  : ${stat_dropped_buffers}")
                     Log.d(TAG, "queue limits     : ${max_frames_soft} soft / ${max_frames} hard")
                     Log.d(TAG, "buffer too small : ${stat_small_buffer}")
+                    streamrec!!.debugInfo()
                     true
                 }
                 CMD_SET_RECMSG_SERVICE -> {

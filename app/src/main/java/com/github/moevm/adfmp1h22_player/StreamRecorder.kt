@@ -206,4 +206,16 @@ class StreamRecorder(
         }
     }
 
+    fun debugInfo() {
+        Log.d(TAG, "chan: queue:${chanqueue.size} freelist:${chanfreelist.size}")
+
+        val cb = chancurbuf
+        val cur = if (cb != null) {
+            "${cb.position()}/${cb.limit()}"
+        } else {
+            "(none)"
+        }
+        Log.d(TAG, "current: ${cur}")
+    }
+
 }
