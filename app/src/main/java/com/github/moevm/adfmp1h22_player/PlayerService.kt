@@ -380,7 +380,7 @@ class PlayerService : Service() {
                                     }
                                 }
 
-                                streamrec!!.onPCMBuffer(info.presentationTimeUs, buf.slice())
+                                // streamrec!!.onPCMBuffer(info.presentationTimeUs, buf.slice())
 
                                 mc.releaseOutputBuffer(index, false)
                             }
@@ -493,8 +493,9 @@ class PlayerService : Service() {
                                                 current_meta = null
                                             }
 
-                                            frm.buf.limit(frm.buf.position())
-                                            frm.buf.rewind()
+                                            frm.buf.flip()
+
+                                            streamrec!!.onFrame(frm.buf.slice())
 
                                             bqueue.add(frm)
                                             current_frame = null
