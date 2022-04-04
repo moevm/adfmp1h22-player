@@ -32,6 +32,8 @@ class StreamRecorder(
 
     companion object {
         val TAG = "StreamRecorder"
+
+        val FILE_IO_BUFFER_SIZE = 65536 // 64KiB
     }
 
     interface Callback {
@@ -59,6 +61,7 @@ class StreamRecorder(
     private var track: TrackInfo? = null
     private val trackqueue = LinkedList<Recording?>()
 
+    private var chancurbuf: ByteBuffer? = null
     private val chanqueue = LinkedList<ByteBuffer?>()
     private val chanfreelist = LinkedList<ByteBuffer>()
     private var chanbusyslot: ByteBuffer? = null
@@ -85,8 +88,6 @@ class StreamRecorder(
 
     private fun onWriteDone(n: Int) {
         handler.post {
-            Log.d(TAG, "onWriteDone ${chanqueue.size}/${chanfreelist.size}")
-
             val t = track
             if (t == null) {
                 Log.w(TAG, "onWriteDone: track is null")
@@ -154,29 +155,26 @@ class StreamRecorder(
     }
 
     private fun getChanBuffer(n: Int): ByteBuffer {
-        var b: ByteBuffer? = null
-        while (true) {
-            val x = chanfreelist.poll()
-            if (x == null) {
-                break
-            }
-            if (x.capacity() >= n) {
-                b = x
-                break
-            } else {
-                // TODO: stats
-                Log.i(TAG, "File channel buffer from freelist too small for $n")
-            }
+        var b = chancurbuf
+
+        if (b != null && b.remaining() < n) {
+            b.flip()
+            chanqueue.add(b)
+            b = null
+            maybeDoOutput()
         }
+
+        // Either first time or not enough space in current buffer
         if (b == null) {
-            // TODO: stats
-            b = ByteBuffer.allocate(n)
+            b = chanfreelist.poll()
+
             if (b == null) {
-                Log.e(TAG, "Failed to allocate ByteBuffer of size $n")
+                b = ByteBuffer.allocate(FILE_IO_BUFFER_SIZE)
             }
         }
-        b!!.clear()
-        return b
+
+        chancurbuf = b
+        return b!!
     }
 
     private fun mediaCodecCallback() = object : MediaCodec.Callback() {
@@ -214,15 +212,14 @@ class StreamRecorder(
                     encfreelist.add(ib)
 
                     val n = buf.position()
-                    buf.rewind()
-                    buf.limit(n) // TODO: flip instead?
+                    buf.flip()
 
                     mc.queueInputBuffer(index, 0, n, ib.timestamp, 0)
                 }
+
             } else {
 
                 // WARN: drained
-
                 mc.queueInputBuffer(index, 0, 0, 0, 0)
 
             }
@@ -234,9 +231,18 @@ class StreamRecorder(
             info: MediaCodec.BufferInfo,
         ) {
             if (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) {
+
                 Log.i(TAG, "onOBA: enqueue end flag")
                 mc.releaseOutputBuffer(index, false)
+
+                // flush file io
+                chancurbuf?.let {
+                    it.flip()
+                    chanqueue.add(it)
+                }
+                chancurbuf = null
                 chanqueue.add(null)
+
                 maybeDoOutput()
                 return
             }
@@ -256,13 +262,8 @@ class StreamRecorder(
             val b = getChanBuffer(buf.remaining() + 7)
             writeADTSHeader(b, buf.remaining() + 7)
             b.put(buf)
-            b.flip()
 
             mc.releaseOutputBuffer(index, false)
-
-            Log.d(TAG, "onOutputBufAvail ${chanqueue.size}/${chanfreelist.size}")
-            chanqueue.add(b)
-            maybeDoOutput()
         }
 
         override fun onOutputFormatChanged(
@@ -339,7 +340,7 @@ class StreamRecorder(
     }
 
     private fun doStop() {
-        Log.d(TAG, "doStop")
+        Log.i(TAG, "doStop")
         cb.onStop()
         enc?.release()
     }
