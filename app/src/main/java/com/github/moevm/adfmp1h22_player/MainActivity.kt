@@ -12,6 +12,7 @@ import android.content.Intent
 import androidx.fragment.app.Fragment
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
+import com.github.moevm.adfmp1h22_player.SQLite.SQLHelper
 import kotlinx.android.synthetic.main.activity_main.*
 
 import android.content.ServiceConnection
@@ -28,6 +29,8 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        startService(Intent(applicationContext, Service1::class.java))
 
         pager.adapter = object : FragmentStateAdapter(this) {
             override fun getItemCount(): Int = 2
@@ -70,6 +73,8 @@ class MainActivity : AppCompatActivity() {
 
         Log.d("LIFECYCLE", "creating main activity with $savedInstanceState")
         pager.setCurrentItem(savedInstanceState?.getInt("page") ?: 1, false)
+
+
     }
 
     override fun onDestroy() {
