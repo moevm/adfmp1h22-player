@@ -1,29 +1,28 @@
 package com.github.moevm.adfmp1h22_player
 
 import android.app.Service
-import android.content.ComponentName
-import android.content.Context
 import android.content.Intent
-import android.content.ServiceConnection
 import android.os.Binder
 import android.os.IBinder
 import android.util.Log
 import com.github.moevm.adfmp1h22_player.SQLite.SQLHelper
 import com.github.moevm.adfmp1h22_player.SQLite.SQLiteAllStationsManager
 import com.github.moevm.adfmp1h22_player.SQLite.SQLiteContract
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 
-class Service1 : Service() {
+class StationCatalogueUpdaterService : Service() {
 
     var db : SQLHelper? = null
 
     private val binder by lazy { Service1Binder() }
     inner class Service1Binder: Binder(){
-        fun getService(): Service1{
+        fun getService(): StationCatalogueUpdaterService{
             Log.d("TAG", "getService")
-            return this@Service1
+            return this@StationCatalogueUpdaterService
         }
     }
 
@@ -37,6 +36,7 @@ class Service1 : Service() {
 
 
         val stL = ArrayList<Station>()
+        GlobalScope.launch{
         val call: Call<AddStationList?>? = apiInterface!!.AddStationListResources()
         Log.d("TAG", call?.request()?.headers.toString())
         call?.enqueue(object  : Callback<AddStationList?> {
@@ -49,8 +49,14 @@ class Service1 : Service() {
                 if(resource != null){
                     var progress = resource.size - 1
                     for (i in 0..progress) {
-                        val station = Station(resource[i].changeuuid.toString(), resource[i].name.toString(), resource[i].favicon.toString())
-                        stL.add(station)
+                        if(progress % 10 == 0) {
+                            val station = Station(
+                                resource[i].changeuuid.toString(),
+                                resource[i].name.toString(),
+                                resource[i].favicon.toString()
+                            )
+                            stL.add(station)
+                        }
                     }
                     manager.insertRows(stL)
                     manager.deleteTable("AllStations")
@@ -67,6 +73,7 @@ class Service1 : Service() {
             }
 
         })
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -85,12 +92,12 @@ class Service1 : Service() {
         manager.createTable(createTable_new)
 
         updateAddedList(manager)
-        Log.d("TAG", "Service1 started")
+        Log.d("TAG", "StationCatalogueUpdaterService started")
         return START_STICKY
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        Log.d("TAG", "Service1 destroyed")
+        Log.d("TAG", "StationCatalogueUpdaterService destroyed")
     }
 }

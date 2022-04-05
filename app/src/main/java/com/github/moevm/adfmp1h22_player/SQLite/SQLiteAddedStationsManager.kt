@@ -37,16 +37,16 @@ class SQLiteAddedStationsManager(
     }
     fun parseStation(c:Cursor) : Station{
         return Station(
-            changeuuid = c.getString(c.getColumnIndexOrThrow(SQLiteContract.AllStationsTable.COLUMN_CHANGEUUID)),
-            name = c.getString(c.getColumnIndexOrThrow(SQLiteContract.AllStationsTable.COLUMN_NAME)),
-            faviconUrl = c.getString(c.getColumnIndexOrThrow(SQLiteContract.AllStationsTable.COLUMN_FAVICON))
+            changeuuid = c.getString(c.getColumnIndexOrThrow(SQLiteContract.AddedStationsTable.COLUMN_CHANGEUUID)),
+            name = c.getString(c.getColumnIndexOrThrow(SQLiteContract.AddedStationsTable.COLUMN_NAME)),
+            faviconUrl = c.getString(c.getColumnIndexOrThrow(SQLiteContract.AddedStationsTable.COLUMN_FAVICON))
         )
     }
     fun getData(): MutableList<Station> {
         val db = db.writableDatabase
         Log.d("TAG","in getData()")
         val c: Cursor = db.query(
-            SQLiteContract.AllStationsTable.TABLE_NAME,
+            SQLiteContract.AddedStationsTable.TABLE_NAME,
             null, null, null, null, null, null
         )
         return c.use {

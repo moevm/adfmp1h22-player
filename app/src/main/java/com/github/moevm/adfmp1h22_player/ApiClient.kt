@@ -36,8 +36,8 @@ class APIClient {
                     .build()
                 return chain.proceed(newReq)
             }
-        }).addNetworkInterceptor(httpLoggingInterceptor).build()
-
+        }).build()
+//            .addNetworkInterceptor(httpLoggingInterceptor)
         retrofit = Retrofit.Builder()
             .baseUrl("http://de1.api.radio-browser.info/")
             .addConverterFactory(GsonConverterFactory.create())

@@ -14,17 +14,17 @@ import kotlinx.android.synthetic.main.activity_add_station.*
 
 class AddStationActivity : AppCompatActivity() {
 
-    private var service1: Service1? = null
+    private var stationCatalogueUpdaterService: StationCatalogueUpdaterService? = null
     private var sBound: Boolean = false
 
     private val boundServiceConnection = object : ServiceConnection {
         override fun onServiceConnected(p0: ComponentName?, p1: IBinder?) {
-            val binder : Service1.Service1Binder = p1 as Service1.Service1Binder
+            val binder : StationCatalogueUpdaterService.Service1Binder = p1 as StationCatalogueUpdaterService.Service1Binder
             if(!sBound) {
-                service1 = binder.getService()
+                stationCatalogueUpdaterService = binder.getService()
                 sBound = true
                 if(sBound){
-                    val db = service1?.db
+                    val db = stationCatalogueUpdaterService?.db
                     val manager = SQLiteAllStationsManager(db!!)
                     val stationList = manager.getData()
                     val layoutManager = LinearLayoutManager(applicationContext)
@@ -48,8 +48,8 @@ class AddStationActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_add_station)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        applicationContext.bindService(Intent(this, Service1::class.java), boundServiceConnection, Context.BIND_AUTO_CREATE)
-//        Intent(this, Service1::class.java).also { intent ->
+        applicationContext.bindService(Intent(this, StationCatalogueUpdaterService::class.java), boundServiceConnection, Context.BIND_AUTO_CREATE)
+//        Intent(this, StationCatalogueUpdaterService::class.java).also { intent ->
 //            application.bindService(intent, boundServiceConnection, Context.BIND_AUTO_CREATE)
 //        }
     }

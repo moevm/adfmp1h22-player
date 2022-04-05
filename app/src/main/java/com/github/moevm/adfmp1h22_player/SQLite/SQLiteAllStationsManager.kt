@@ -16,6 +16,7 @@ class SQLiteAllStationsManager(
     }
     fun insertRows(list: List<Station>){
         val db = db.writableDatabase
+        Log.d("TAG", list.size.toString())
         db.beginTransaction()
         try {
             for(item in list){
