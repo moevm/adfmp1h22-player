@@ -88,7 +88,7 @@ class Service1 : Service() {
                 " INTEGER NOT NULL)"
         manager.createTable(createTable_new)
 
-        updateAddedList(manager)
+        // updateAddedList(manager)
         Log.d("TAG", "Service1 started")
         return START_STICKY
     }
