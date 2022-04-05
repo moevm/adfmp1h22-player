@@ -21,4 +21,22 @@ object SQLiteContract {
         const val COLUMN_FAVICON_DATE = "faviconDate"
     }
     object HistoryTable{}
+    object RecordingsTable {
+        const val TABLE_NAME = "RecordingsTable"
+        const val COLUMN_UUID = "uuid"
+        const val COLUMN_TRACK_ORIGTITLE = "track_origtitle"
+        const val COLUMN_TRACK_ARTIST = "track_artist"
+        const val COLUMN_TRACK_TITLE = "track_title"
+
+        const val COLUMN_TIMESTAMP = "timestamp"
+        // Java timestamp: ms from Epoch
+
+        const val COLUMN_STATE = "state"
+        // 0: recording
+        // 1: done
+        // 2: saved
+
+        // TODO: duration
+        // TODO: station info
+    }
 }

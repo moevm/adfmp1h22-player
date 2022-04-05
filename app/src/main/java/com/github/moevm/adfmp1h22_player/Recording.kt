@@ -1,6 +1,7 @@
 package com.github.moevm.adfmp1h22_player
 
 import java.util.UUID
+import java.time.Instant
 
 import android.os.Parcelable
 
@@ -8,6 +9,14 @@ import kotlinx.android.parcel.Parcelize
 
 data class Recording(val uuid: UUID,
                      val metadata: TrackMetaData,
-                     // TODO: timestamp
+                     val timestamp: Instant,
+                     val state: Int,
                      // TODO: duration
-)
+                     // TODO: station info
+) {
+    companion object {
+        const val STATE_RECORDING = 0
+        const val STATE_DONE = 1
+        const val STATE_SAVED =2
+    }
+}

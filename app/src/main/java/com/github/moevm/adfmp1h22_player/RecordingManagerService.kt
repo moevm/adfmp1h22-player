@@ -9,6 +9,7 @@ import java.nio.file.Paths
 import java.nio.file.Files
 
 import java.util.UUID
+import java.time.Instant
 
 import androidx.lifecycle.MutableLiveData
 
@@ -21,6 +22,11 @@ import android.os.Binder
 import android.os.IBinder
 import android.content.Intent
 import android.app.Service
+
+import android.content.ContentValues
+import android.database.Cursor
+import com.github.moevm.adfmp1h22_player.SQLite.SQLHelper
+import com.github.moevm.adfmp1h22_player.SQLite.SQLiteContract
 
 class RecordingManagerService : Service() {
 
@@ -48,6 +54,7 @@ class RecordingManagerService : Service() {
     val mRecordingsList = MutableLiveData<MutableList<Recording>>(ArrayList<Recording>())
 
     class ManagerThread(
+        private val mDbHelper: SQLHelper,
         private val mStorageDir: String,
         private val mCb: Callback,
     ) : HandlerThread("RecordingManagerService.ManagerThread") {
@@ -60,38 +67,116 @@ class RecordingManagerService : Service() {
 
         lateinit var mHandler: Handler
 
+        private fun decodeRecording(cur: Cursor): Recording {
+            return Recording(
+                uuid = UUID.fromString(cur.getString(0)),
+                metadata = TrackMetaData(
+                    original = cur.getString(1),
+                    title = cur.getString(3),
+                    artist = (if (cur.getType(2) == Cursor.FIELD_TYPE_NULL) null
+                              else cur.getString(2)),
+                ),
+                timestamp = Instant.ofEpochMilli(cur.getLong(4)),
+                state = cur.getInt(5),
+            )
+        }
+
+        private fun encodeRecording(r: Recording): ContentValues {
+            SQLiteContract.RecordingsTable.run {
+                val cv = ContentValues()
+                cv.put(COLUMN_UUID, r.uuid.toString())
+                cv.put(COLUMN_TRACK_ORIGTITLE, r.metadata.original)
+                cv.put(COLUMN_TRACK_ARTIST, r.metadata.artist)
+                cv.put(COLUMN_TRACK_TITLE, r.metadata.title)
+                cv.put(COLUMN_TIMESTAMP, r.timestamp.toEpochMilli())
+                cv.put(COLUMN_STATE, r.state)
+                return cv
+            }
+        }
+
         fun handleMessage(msg: Message): Boolean {
             return when (msg.what) {
                 CMD_FETCH_RECORDINGS -> {
-                    Log.d(TAG, "CMD_FETCH_RECORDINGS not implemented")
-                    mCb.onRecordings(mutableListOf<Recording>())
+                    Log.i(TAG, "CMD_FETCH_RECORDINGS")
+
+                    val l = ArrayList<Recording>()
+
+                    mDbHelper.readableDatabase.let { db ->
+                        SQLiteContract.RecordingsTable.run {
+                            val cur = db.query(
+                                TABLE_NAME,
+                                arrayOf(
+                                    COLUMN_UUID,
+                                    COLUMN_TRACK_ORIGTITLE,
+                                    COLUMN_TRACK_ARTIST,
+                                    COLUMN_TRACK_TITLE,
+                                    COLUMN_TIMESTAMP,
+                                    COLUMN_STATE,
+                                ),
+                                "$COLUMN_STATE != 0",
+                                arrayOf<String>(),
+                                null,
+                                null,
+                                "$COLUMN_TIMESTAMP DESC"
+                            )
+                            cur.moveToFirst()
+                            while (! cur.isAfterLast()) {
+                                val r = decodeRecording(cur)
+                                Log.d(TAG, "FETCH: $r")
+                                l.add(r)
+                                cur.moveToNext()
+                            }
+                        }
+                    }
+
+                    mCb.onRecordings(l)
                     true
                 }
                 CMD_CLEAN_UP -> {
-                    Log.d(TAG, "CMD_CLEAN_UP not implemented")
+                    Log.w(TAG, "CMD_CLEAN_UP not implemented")
                     true
                 }
                 CMD_REQUEST_NEW_RECORDING -> {
-                    Log.d(TAG, "CMD_REQUEST_NEW_RECORDING not implemented")
+                    Log.i(TAG, "CMD_REQUEST_NEW_RECORDING")
+
                     val cb = msg.obj as (Recording) -> Unit
-                    val md = msg.getData().getParcelable<TrackMetaData>(KEY_METADATA)!!
+                    val md = msg.getData()
+                        .getParcelable<TrackMetaData>(KEY_METADATA)!!
+
+                    val r = Recording(UUID.randomUUID(), md, Instant.now(),
+                                      Recording.STATE_RECORDING)
+                    mDbHelper.writableDatabase.let { db ->
+                        db.insert(SQLiteContract.RecordingsTable.TABLE_NAME,
+                                  null, encodeRecording(r))
+                    }
+
                     Files.createDirectories(Paths.get(mStorageDir, PATH_PREFIX))
                     mHandler.postDelayed({
-                        val r = Recording(UUID.randomUUID(), md)
                         cb(r)
                         mCb.onNewRecording(r)
                     }, 10)
                     true
                 }
                 CMD_FINISH_RECORDING -> {
-                    Log.d(TAG, "CMD_FINISH_RECORDING not implemented")
+                    Log.i(TAG, "CMD_FINISH_RECORDING")
                     val r = msg.obj as Recording
+
+                    mDbHelper.writableDatabase.let { db ->
+                        SQLiteContract.RecordingsTable.run {
+                            val cv = ContentValues()
+                            cv.put(COLUMN_STATE, r.state)
+                            db.update(TABLE_NAME, cv,
+                                      "$COLUMN_UUID = ?",
+                                      arrayOf(r.uuid.toString()))
+                        }
+                    }
+
                     mCb.onRecordingFinished(r)
                     true
                 }
                 CMD_SAVE_RECORDING -> {
                     // NOTE: should accept callback
-                    Log.d(TAG, "CMD_SAVE_RECORDING not implemented")
+                    Log.w(TAG, "CMD_SAVE_RECORDING not implemented")
                     true
                 }
                 else -> false
@@ -131,6 +216,7 @@ class RecordingManagerService : Service() {
         mStorageDir = getExternalFilesDirs(null)[0].absolutePath
 
         mThread = ManagerThread(
+            SQLHelper(this),
             mStorageDir,
             object : ManagerThread.Callback {
                 override fun onRecordings(rs: MutableList<Recording>) {
