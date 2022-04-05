@@ -1,5 +1,8 @@
 package com.github.moevm.adfmp1h22_player
 
+import androidx.fragment.app.activityViewModels
+
+import android.util.Log
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
@@ -8,21 +11,24 @@ import kotlinx.android.synthetic.main.fragment_player.*
 
 class PlayerFragment : Fragment(R.layout.fragment_player) {
 
-    enum class PlaybackState {
-        STOPPED, PAUSED, PLAYING,
+    var onStopRequested: (() -> Unit)? = null
+    var onPauseRequested: (() -> Unit)? = null
+    var onResumeRequested: (() -> Unit)? = null
+
+    private val playbackModel: PlaybackModel by activityViewModels()
+
+    companion object {
+        val TAG = "PlayerFragment"
     }
 
-    private var state: PlaybackState = PlaybackState.STOPPED
-
-    var onStopListener: (() -> Unit)? = null
-    var queryState: (() -> Boolean)? = null
-
     fun updateUiState() {
-        when (state) {
+        Log.d(TAG, "updateUiState")
+        when (playbackModel.state.value) {
             PlaybackState.STOPPED -> ib_playpause.run {
                 setImageResource(R.drawable.ic_play_64)
                 setEnabled(false)
             }
+            PlaybackState.LOADING -> {} // TODO
             PlaybackState.PAUSED -> ib_playpause.run {
                 setImageResource(R.drawable.ic_play_64)
                 setEnabled(true)
@@ -31,17 +37,17 @@ class PlayerFragment : Fragment(R.layout.fragment_player) {
                 setImageResource(R.drawable.ic_pause_64)
                 setEnabled(true)
             }
+            else -> throw IllegalArgumentException("Invalid state")
         }
     }
 
-    fun setPlayingState(value: PlaybackState) {
-        if (value == state) {
-            return
-        }
-        state = value
-        updateUiState()
-        if (state == PlaybackState.STOPPED) {
-            onStopListener?.let { it() }
+    fun setStrings(title: String, artist: String?) {
+        tv_tracktitle.setText(title)
+        if (artist == null) {
+            tv_trackartist.setVisibility(View.INVISIBLE)
+        } else {
+            tv_trackartist.setText(artist)
+            tv_trackartist.setVisibility(View.VISIBLE)
         }
     }
 
@@ -53,23 +59,38 @@ class PlayerFragment : Fragment(R.layout.fragment_player) {
         }
 
         ib_playpause.setOnClickListener {
-            setPlayingState(when (state) {
-                PlaybackState.PLAYING -> PlaybackState.PAUSED
-                else -> PlaybackState.PLAYING
-            })
+            when (playbackModel.state.value) {
+                PlaybackState.PLAYING -> onPauseRequested?.let { it() }
+                PlaybackState.PAUSED -> onResumeRequested?.let { it() }
+                else -> {
+                    Log.e(TAG, "Play/pause button was clicked in unusual state")
+                }
+            }
         }
 
         ib_stop.setOnClickListener {
-            setPlayingState(PlaybackState.STOPPED)
+            onStopRequested?.let { it() }
         }
 
+        playbackModel.station.observe(viewLifecycleOwner) { station ->
+            if (station != null) {
+                setStrings(station.name, null)
+            }
+        }
+        playbackModel.metadata.observe(viewLifecycleOwner) { m ->
+            setStrings(m.title, m.artist)
+        }
+        playbackModel.state.observe(viewLifecycleOwner) {
+            updateUiState()
+        }
+
+        // TODO: remove?
         updateUiState()
     }
 
     override fun onResume() {
         super.onResume()
-        val playing = queryState?.let { it() } ?: false
-        setPlayingState(if (playing) PlaybackState.PLAYING
-                        else PlaybackState.STOPPED)
+        // TODO: handled by lifecycle observer?
+        updateUiState()
     }
 }

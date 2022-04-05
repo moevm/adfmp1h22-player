@@ -40,6 +40,10 @@ class AddStationActivity : AppCompatActivity() {
 
         override fun onServiceDisconnected(p0: ComponentName?) {
             sBound = false
+//        val progress = 10
+//        for (i in 0..progress) {
+//            val station = Station("", "Station ${i}", "", "")
+//            stationList.add(i, station)
         }
 
     }
