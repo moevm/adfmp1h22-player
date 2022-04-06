@@ -591,9 +591,9 @@ class PlayerService : Service() {
                     }
 
                     override fun onTrackDone(r: Recording, chan: AsynchronousFileChannel) {
-                        // TODO: log
+                        Log.d(TAG, "track ${r.uuid} done")
                         chan.close()
-                        // TODO: recmgr: notifyRecordingFinished
+                        recmgr!!.notifyRecordingFinished(r)
                     }
 
                     override fun onStop() {

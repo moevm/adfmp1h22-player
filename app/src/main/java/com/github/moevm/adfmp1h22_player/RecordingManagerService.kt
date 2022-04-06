@@ -164,7 +164,7 @@ class RecordingManagerService : Service() {
                     mDbHelper.writableDatabase.let { db ->
                         SQLiteContract.RecordingsTable.run {
                             val cv = ContentValues()
-                            cv.put(COLUMN_STATE, r.state)
+                            cv.put(COLUMN_STATE, Recording.STATE_DONE)
                             db.update(TABLE_NAME, cv,
                                       "$COLUMN_UUID = ?",
                                       arrayOf(r.uuid.toString()))
@@ -197,7 +197,11 @@ class RecordingManagerService : Service() {
         m.sendToTarget()
     }
 
-    // TODO: finishRecording
+    fun notifyRecordingFinished(r: Recording) {
+        mHandler.obtainMessage(CMD_FINISH_RECORDING, r)
+            .sendToTarget()
+    }
+
     // TODO: saveRecording
     // TODO: cleanUpRecordings
 
