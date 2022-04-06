@@ -94,42 +94,79 @@ class RecordingManagerService : Service() {
             }
         }
 
+        private fun handleCmdFetchRecordings() {
+            Log.i(TAG, "CMD_FETCH_RECORDINGS")
+
+            val l = ArrayList<Recording>()
+
+            mDbHelper.readableDatabase.let { db ->
+                SQLiteContract.RecordingsTable.run {
+                    val cur = db.query(
+                        TABLE_NAME,
+                        arrayOf(
+                            COLUMN_UUID,
+                            COLUMN_TRACK_ORIGTITLE,
+                            COLUMN_TRACK_ARTIST,
+                            COLUMN_TRACK_TITLE,
+                            COLUMN_TIMESTAMP,
+                            COLUMN_STATE,
+                        ),
+                        "$COLUMN_STATE != 0",
+                        arrayOf<String>(),
+                        null,
+                        null,
+                        "$COLUMN_TIMESTAMP DESC"
+                    )
+                    cur.moveToFirst()
+                    while (! cur.isAfterLast()) {
+                        val r = decodeRecording(cur)
+                        Log.d(TAG, "FETCH: $r")
+                        l.add(r)
+                        cur.moveToNext()
+                    }
+                }
+            }
+
+            mCb.onRecordings(l)
+        }
+
+        private fun handleCmdRequestNewRecording(cb: (Recording) -> Unit,
+                                                 md: TrackMetaData) {
+            Log.i(TAG, "CMD_REQUEST_NEW_RECORDING")
+
+            val r = Recording(UUID.randomUUID(), md, Instant.now(),
+                              Recording.STATE_RECORDING)
+            mDbHelper.writableDatabase.let { db ->
+                db.insert(SQLiteContract.RecordingsTable.TABLE_NAME,
+                          null, encodeRecording(r))
+            }
+
+            Files.createDirectories(Paths.get(mStorageDir, PATH_PREFIX))
+            mHandler.postDelayed({
+                cb(r)
+                mCb.onNewRecording(r)
+            }, 10)
+        }
+
+        private fun handleCmdFinishRecording(r: Recording) {
+            Log.i(TAG, "CMD_FINISH_RECORDING")
+            mDbHelper.writableDatabase.let { db ->
+                SQLiteContract.RecordingsTable.run {
+                    val cv = ContentValues()
+                    cv.put(COLUMN_STATE, Recording.STATE_DONE)
+                    db.update(TABLE_NAME, cv,
+                              "$COLUMN_UUID = ?",
+                              arrayOf(r.uuid.toString()))
+                }
+            }
+
+            mCb.onRecordingFinished(r)
+        }
+
         fun handleMessage(msg: Message): Boolean {
             return when (msg.what) {
                 CMD_FETCH_RECORDINGS -> {
-                    Log.i(TAG, "CMD_FETCH_RECORDINGS")
-
-                    val l = ArrayList<Recording>()
-
-                    mDbHelper.readableDatabase.let { db ->
-                        SQLiteContract.RecordingsTable.run {
-                            val cur = db.query(
-                                TABLE_NAME,
-                                arrayOf(
-                                    COLUMN_UUID,
-                                    COLUMN_TRACK_ORIGTITLE,
-                                    COLUMN_TRACK_ARTIST,
-                                    COLUMN_TRACK_TITLE,
-                                    COLUMN_TIMESTAMP,
-                                    COLUMN_STATE,
-                                ),
-                                "$COLUMN_STATE != 0",
-                                arrayOf<String>(),
-                                null,
-                                null,
-                                "$COLUMN_TIMESTAMP DESC"
-                            )
-                            cur.moveToFirst()
-                            while (! cur.isAfterLast()) {
-                                val r = decodeRecording(cur)
-                                Log.d(TAG, "FETCH: $r")
-                                l.add(r)
-                                cur.moveToNext()
-                            }
-                        }
-                    }
-
-                    mCb.onRecordings(l)
+                    handleCmdFetchRecordings()
                     true
                 }
                 CMD_CLEAN_UP -> {
@@ -137,41 +174,17 @@ class RecordingManagerService : Service() {
                     true
                 }
                 CMD_REQUEST_NEW_RECORDING -> {
-                    Log.i(TAG, "CMD_REQUEST_NEW_RECORDING")
-
                     val cb = msg.obj as (Recording) -> Unit
                     val md = msg.getData()
                         .getParcelable<TrackMetaData>(KEY_METADATA)!!
 
-                    val r = Recording(UUID.randomUUID(), md, Instant.now(),
-                                      Recording.STATE_RECORDING)
-                    mDbHelper.writableDatabase.let { db ->
-                        db.insert(SQLiteContract.RecordingsTable.TABLE_NAME,
-                                  null, encodeRecording(r))
-                    }
-
-                    Files.createDirectories(Paths.get(mStorageDir, PATH_PREFIX))
-                    mHandler.postDelayed({
-                        cb(r)
-                        mCb.onNewRecording(r)
-                    }, 10)
+                    handleCmdRequestNewRecording(cb, md)
                     true
                 }
                 CMD_FINISH_RECORDING -> {
-                    Log.i(TAG, "CMD_FINISH_RECORDING")
                     val r = msg.obj as Recording
 
-                    mDbHelper.writableDatabase.let { db ->
-                        SQLiteContract.RecordingsTable.run {
-                            val cv = ContentValues()
-                            cv.put(COLUMN_STATE, Recording.STATE_DONE)
-                            db.update(TABLE_NAME, cv,
-                                      "$COLUMN_UUID = ?",
-                                      arrayOf(r.uuid.toString()))
-                        }
-                    }
-
-                    mCb.onRecordingFinished(r)
+                    handleCmdFinishRecording(r)
                     true
                 }
                 CMD_SAVE_RECORDING -> {
