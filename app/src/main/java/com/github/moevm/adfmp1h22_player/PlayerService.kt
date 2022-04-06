@@ -115,7 +115,7 @@ class PlayerService : Service() {
 
         private class Frame(
             public val buf: ByteBuffer,
-            public var meta: String?,
+            public var meta: TrackMetaData?,
         ) {
             fun clear() {
                 buf.clear()
@@ -125,7 +125,7 @@ class PlayerService : Service() {
 
         private class MetaDataRecord(
             public val timestamp: Long,
-            public val meta: String,
+            public val meta: TrackMetaData,
         )
 
         private lateinit var hc: HttpClient
@@ -143,7 +143,7 @@ class PlayerService : Service() {
 
         // HTTP threads only
         private var current_frame: Frame? = null
-        private var current_meta: String? = null
+        private var current_meta: TrackMetaData? = null
 
         private var decoder_codec: MediaCodec? = null
         private var decoder_ks: (() -> Unit)? = null
@@ -341,26 +341,7 @@ class PlayerService : Service() {
 
                                 while (!metaqueue.isEmpty()
                                        && info.presentationTimeUs >= metaqueue.get(0).timestamp) {
-                                    val mp = metaqueue.remove()
-                                    val m = parseTrackTitle(mp.meta)
-                                    cb.onMetaData(m)
-
-                                    // TODO: if first metadata string,
-                                    // we may be joining in the middle
-                                    // of a song. Shortwave drops the
-                                    // first song, should we?
-
-                                    // TODO: use streamrec
-
-                                    // TODO: move into separate class?
-                                    Log.d(TAG, "have new metadata for recording")
-                                    recmgr?.let {
-                                        Log.d(TAG, "have recmgr")
-                                        it.requestNewRecording(m) { r ->
-                                            Log.d(TAG, "requestNewRecording fired")
-                                            streamrec!!.onNewTrack(r)
-                                        }
-                                    }
+                                    cb.onMetaData(metaqueue.remove().meta)
                                 }
 
                                 val buf = mc.getOutputBuffer(index)
@@ -379,8 +360,6 @@ class PlayerService : Service() {
                                         buf.rewind()
                                     }
                                 }
-
-                                // streamrec!!.onPCMBuffer(info.presentationTimeUs, buf.slice())
 
                                 mc.releaseOutputBuffer(index, false)
                             }
@@ -488,9 +467,22 @@ class PlayerService : Service() {
                                     current_frame?.also { frm ->
                                         val n = frm.buf.position()
                                         if (n > 0) {
-                                            current_meta?.let {
-                                                frm.meta = it
+                                            current_meta?.let { m ->
+                                                frm.meta = m
                                                 current_meta = null
+
+                                                // TODO: if first metadata string,
+                                                // we may be joining in the middle
+                                                // of a song. Shortwave drops the
+                                                // first song, should we?
+
+                                                Log.d(TAG, "requesting recording for ${m.original}")
+                                                recmgr?.let {
+                                                    it.requestNewRecording(m) { r ->
+                                                         Log.d(TAG, "new track: ${r.uuid}")
+                                                         streamrec!!.onNewTrack(r)
+                                                    }
+                                                }
                                             }
 
                                             frm.buf.flip()
@@ -556,7 +548,8 @@ class PlayerService : Service() {
                                         return
                                     }
                                     Log.d(TAG, "new metadata: ${s2}")
-                                    current_meta = s2
+                                    val m = parseTrackTitle(s2)
+                                    current_meta = m
                                 }
                             }
                         )
