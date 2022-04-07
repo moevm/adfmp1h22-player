@@ -9,7 +9,6 @@ import android.util.JsonReader
 
 import android.content.Intent
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import android.view.MotionEvent
 import android.widget.Toast
@@ -23,6 +22,7 @@ import androidx.recyclerview.selection.ItemKeyProvider
 import androidx.recyclerview.selection.ItemDetailsLookup
 import androidx.recyclerview.selection.StorageStrategy
 import androidx.viewpager2.widget.ViewPager2
+import com.github.moevm.adfmp1h22_player.SQLite.SQLiteContract
 
 import com.google.android.material.snackbar.Snackbar
 
@@ -40,12 +40,14 @@ fun readStationList(r: JsonReader): List<Station> {
     while (r.hasNext()) {
         r.beginObject()
         var changeUuid: String? = null
+        var stationuuid : String? = null
         var name: String? = null
         var streamUrl: String? = null
         var faviconUrl: String? = null
         while (r.hasNext()) {
             when (r.nextName()) {
                 "changeuuid" -> changeUuid = r.nextString()
+                "stationuuid" -> stationuuid = r.nextString()
                 "name" -> name = r.nextString()
                 "url" -> streamUrl = r.nextString()
                 "favicon" -> faviconUrl = r.nextString()
@@ -54,11 +56,13 @@ fun readStationList(r: JsonReader): List<Station> {
         }
         r.endObject()
         if (changeUuid != null
+            && stationuuid != null
             && name != null
             && streamUrl != null
             && faviconUrl != null) {
             l.add(Station(
                       changeUuid,
+                      stationuuid,
                       name,
                       streamUrl,
                       faviconUrl,
@@ -202,9 +206,9 @@ class StationListFragment : Fragment(R.layout.fragment_station_list) {
         a.tracker = tracker
 
         val l = mutableListOf(
-            Station("static:0", "Ultra (MP3 192)", "http://nashe1.hostingradio.ru/ultra-192.mp3", "https://radioultra.ru/favicons/apple-touch-icon.png"),
-            Station("static:1", "192.168.0.98:8000/stream.mp3", "http://192.168.0.98:8000/stream.mp3", ""),
-            Station("static:2", "192.168.0.98:5000/", "http://192.168.0.98:5000/", ""),
+            Station("static:0", "Ultra (MP3 192)", "http://nashe1.hostingradio.ru/ultra-192.mp3", "https://radioultra.ru/favicons/apple-touch-icon.png", ""),
+            Station("static:1", "192.168.0.98:8000/stream.mp3", "http://192.168.0.98:8000/stream.mp3", "", ""),
+            Station("static:2", "192.168.0.98:5000/", "http://192.168.0.98:5000/", "", ""),
         )
         if (! try {
                 val json = requireContext().getAssets().open("stations.json")

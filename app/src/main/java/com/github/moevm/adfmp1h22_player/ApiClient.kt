@@ -17,8 +17,8 @@ class APIClient {
     private var retrofit: Retrofit? = null
 
     fun getClient(): Retrofit? {
-        val httpLoggingInterceptor = HttpLoggingInterceptor()
-        httpLoggingInterceptor.level = HttpLoggingInterceptor.Level.BODY
+//        val httpLoggingInterceptor = HttpLoggingInterceptor()
+//        httpLoggingInterceptor.level = HttpLoggingInterceptor.Level.BODY
 
         val userAgent: String =
             "Radio Player " +
@@ -44,6 +44,7 @@ class APIClient {
             .client(client)
             .build()
         Log.d("TAG", "ApiClient")
+        Log.d("TAG", "${Thread.currentThread().name}")
         return retrofit
     }
 }

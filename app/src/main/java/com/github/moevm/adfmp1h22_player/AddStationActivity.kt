@@ -40,10 +40,6 @@ class AddStationActivity : AppCompatActivity() {
 
         override fun onServiceDisconnected(p0: ComponentName?) {
             sBound = false
-//        val progress = 10
-//        for (i in 0..progress) {
-//            val station = Station("", "Station ${i}", "", "")
-//            stationList.add(i, station)
         }
 
     }
@@ -53,9 +49,6 @@ class AddStationActivity : AppCompatActivity() {
         setContentView(R.layout.activity_add_station)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         applicationContext.bindService(Intent(this, StationCatalogueUpdaterService::class.java), boundServiceConnection, Context.BIND_AUTO_CREATE)
-//        Intent(this, StationCatalogueUpdaterService::class.java).also { intent ->
-//            application.bindService(intent, boundServiceConnection, Context.BIND_AUTO_CREATE)
-//        }
     }
 
 

@@ -1,7 +1,6 @@
 package com.github.moevm.adfmp1h22_player
 
 import androidx.activity.viewModels
-
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem

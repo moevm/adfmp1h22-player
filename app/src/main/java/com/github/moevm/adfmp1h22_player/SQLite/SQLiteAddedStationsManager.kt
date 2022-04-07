@@ -20,7 +20,9 @@ class SQLiteAddedStationsManager(
                     null,
                     contentValuesOf(
                         SQLiteContract.AddedStationsTable.COLUMN_CHANGEUUID to item.changeuuid,
+                        SQLiteContract.AddedStationsTable.COLUMN_STATIONUUID to item.stationuuid,
                         SQLiteContract.AddedStationsTable.COLUMN_NAME to item.name,
+                        SQLiteContract.AddedStationsTable.COLUMN_STREAMURL to item.streamUrl,
                         SQLiteContract.AddedStationsTable.COLUMN_FAVICON to item.faviconUrl,
                         SQLiteContract.AddedStationsTable.COLUMN_FAVICON_DATE to System.currentTimeMillis().toInt()
                     ),
@@ -38,8 +40,10 @@ class SQLiteAddedStationsManager(
     fun parseStation(c:Cursor) : Station{
         return Station(
             changeuuid = c.getString(c.getColumnIndexOrThrow(SQLiteContract.AddedStationsTable.COLUMN_CHANGEUUID)),
+            stationuuid = c.getString(c.getColumnIndexOrThrow(SQLiteContract.AllStationsTable.COLUMN_STATIONUUID)),
             name = c.getString(c.getColumnIndexOrThrow(SQLiteContract.AddedStationsTable.COLUMN_NAME)),
-            faviconUrl = c.getString(c.getColumnIndexOrThrow(SQLiteContract.AddedStationsTable.COLUMN_FAVICON))
+            streamUrl = c.getString(c.getColumnIndexOrThrow(SQLiteContract.AddedStationsTable.COLUMN_STREAMURL)),
+            faviconUrl = c.getString(c.getColumnIndexOrThrow(SQLiteContract.AddedStationsTable.COLUMN_FAVICON)),
         )
     }
     fun getData(): MutableList<Station> {

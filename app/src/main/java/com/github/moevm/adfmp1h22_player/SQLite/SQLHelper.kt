@@ -14,7 +14,9 @@ class SQLHelper(
                 SQLiteContract.AllStationsTable.COLUMN_ID +
                 " INTEGER PRIMARY KEY AUTOINCREMENT," +
                 SQLiteContract.AllStationsTable.COLUMN_CHANGEUUID + " TEXT," +
+                SQLiteContract.AllStationsTable.COLUMN_STATIONUUID + " TEXT," +
                 SQLiteContract.AllStationsTable.COLUMN_NAME + " TEXT," +
+                SQLiteContract.AllStationsTable.COLUMN_STREAMURL + " TEXT," +
                 SQLiteContract.AllStationsTable.COLUMN_FAVICON + " TEXT," +
                 SQLiteContract.AllStationsTable.COLUMN_FAVICON_DATE +
                 " INTEGER NOT NULL)"
@@ -24,7 +26,9 @@ class SQLHelper(
                 SQLiteContract.AddedStationsTable.COLUMN_ID +
                 " INTEGER PRIMARY KEY AUTOINCREMENT," +
                 SQLiteContract.AddedStationsTable.COLUMN_CHANGEUUID + " TEXT," +
+                SQLiteContract.AddedStationsTable.COLUMN_STATIONUUID + " TEXT," +
                 SQLiteContract.AddedStationsTable.COLUMN_NAME + " TEXT," +
+                SQLiteContract.AddedStationsTable.COLUMN_STREAMURL + " TEXT," +
                 SQLiteContract.AddedStationsTable.COLUMN_FAVICON + " TEXT," +
                 SQLiteContract.AddedStationsTable.COLUMN_FAVICON_DATE +
                 " INTEGER NOT NULL)"

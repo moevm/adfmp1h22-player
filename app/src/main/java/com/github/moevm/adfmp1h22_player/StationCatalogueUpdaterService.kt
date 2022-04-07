@@ -28,73 +28,96 @@ class StationCatalogueUpdaterService : Service() {
 
     override fun onBind(intent: Intent): IBinder = binder
 
+    private fun fillingAddedList(manager: SQLiteAllStationsManager) {
 
-    fun updateAddedList(manager: SQLiteAllStationsManager){
-
-        Log.d("TAG", "updateAddedList")
+        Log.d("TAG", "fillingAddedList")
         val apiInterface = APIClient().getClient()?.create(APIInterface::class.java)
 
+//        val t : Thread = object  : Thread(){
+//            override fun run(){
+//                val createTable_new = "CREATE TABLE IF NOT EXISTS ${SQLiteContract.AllStationsTable.TABLE_NAME_NEW} (" +
+//                        SQLiteContract.AllStationsTable.COLUMN_ID +
+//                        " INTEGER PRIMARY KEY AUTOINCREMENT," +
+//                        SQLiteContract.AllStationsTable.COLUMN_CHANGEUUID + " TEXT," +
+//                        SQLiteContract.AllStationsTable.COLUMN_STATIONUUID + " TEXT," +
+//                        SQLiteContract.AllStationsTable.COLUMN_NAME + " TEXT," +
+//                        SQLiteContract.AllStationsTable.COLUMN_STREAMURL + " TEXT," +
+//                        SQLiteContract.AllStationsTable.COLUMN_FAVICON + " TEXT," +
+//                        SQLiteContract.AllStationsTable.COLUMN_FAVICON_DATE +
+//                        " INTEGER NOT NULL)"
+//                manager.createTable(createTable_new)
+//                Log.d("TAG","CREATE TABLE NEW")
+//            }
+//        }
+//        t.start()
 
         val stL = ArrayList<Station>()
         GlobalScope.launch{
-        val call: Call<AddStationList?>? = apiInterface!!.AddStationListResources()
-        Log.d("TAG", call?.request()?.headers.toString())
-        call?.enqueue(object  : Callback<AddStationList?> {
-            override fun onResponse(
-                call: Call<AddStationList?>,
-                response: Response<AddStationList?>
-            ) {
-                Log.d("TAG", response.code().toString())
-                val resource: AddStationList? = response.body()
-                if(resource != null){
-                    var progress = resource.size - 1
-                    for (i in 0..progress) {
-                        if(progress % 10 == 0) {
+            val call: Call<AddStationList?>? = apiInterface!!.AddStationListResources()
+            Log.d("TAG", call?.request()?.headers.toString())
+            call?.enqueue(object  : Callback<AddStationList?> {
+                override fun onResponse(
+                    call: Call<AddStationList?>,
+                    response: Response<AddStationList?>
+                ) {
+                    Log.d("TAG", response.code().toString())
+                    val resource: AddStationList? = response.body()
+                    if(resource != null){
+                        stL.clear()
+                        var progress = resource.size - 1
+                        for (i in 0..progress) {
                             val station = Station(
                                 resource[i].changeuuid.toString(),
+                                resource[i].stationuuid.toString(),
                                 resource[i].name.toString(),
-                                resource[i].favicon.toString()
+                                resource[i].url.toString(),
+                                resource[i].favicon.toString(),
                             )
                             stL.add(station)
                         }
+                        val t : Thread = object  : Thread(){
+                            override fun run(){
+                                manager.insertRows(stL)
+//                                manager.deleteTable("AllStations")
+//                                manager.replace("AllStations_new", "AllStations")
+                            }
+                        }
+                        t.start()
                     }
-                    manager.insertRows(stL)
-                    manager.deleteTable("AllStations")
-                    manager.replace("AllStations_new", "AllStations")
+                    else{
+                        Log.d("TAG", "Error in StationListFragmrnt.kt")
+                    }
                 }
-                else{
-                    Log.d("TAG", "Error in StationListFragmrnt.kt")
+                override fun onFailure(call: Call<AddStationList?>, t: Throwable) {
+                    call.cancel()
                 }
-
-            }
-
-            override fun onFailure(call: Call<AddStationList?>, t: Throwable) {
-                call.cancel()
-            }
-
-        })
+            })
         }
+    }
+
+    private fun updateAddedList(manager: SQLiteAllStationsManager){
+        Log.d("TAG", "updateAddedList")
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         db = SQLHelper(applicationContext)
 
         val manager = SQLiteAllStationsManager(db!!)
-
-        val createTable_new = "CREATE TABLE IF NOT EXISTS ${SQLiteContract.AllStationsTable.TABLE_NAME_NEW} (" +
-                SQLiteContract.AllStationsTable.COLUMN_ID +
-                " INTEGER PRIMARY KEY AUTOINCREMENT," +
-                SQLiteContract.AllStationsTable.COLUMN_CHANGEUUID + " TEXT," +
-                SQLiteContract.AllStationsTable.COLUMN_NAME + " TEXT," +
-                SQLiteContract.AllStationsTable.COLUMN_FAVICON + " TEXT," +
-                SQLiteContract.AllStationsTable.COLUMN_FAVICON_DATE +
-                " INTEGER NOT NULL)"
-        manager.createTable(createTable_new)
-
-        updateAddedList(manager)
+        val t : Thread = object  : Thread() {
+            override fun run() {
+                if(manager.emptyTable(SQLiteContract.AllStationsTable.TABLE_NAME)){
+                    fillingAddedList(manager)
+                }
+                else{
+                    updateAddedList(manager)
+                }
+            }
+        }
+        t.start()
         Log.d("TAG", "StationCatalogueUpdaterService started")
         return START_STICKY
     }
+
 
     override fun onDestroy() {
         super.onDestroy()
