@@ -143,13 +143,13 @@ class RecordingManagerService : Service() {
             mCb.onRecordings(l)
         }
 
-        private fun handleCmdCleanUp() {
-            Log.i(TAG, "CMD_CLEAN_UP")
+        private fun handleCmdCleanUp(removeUnknown: Boolean) {
+            Log.i(TAG, "CMD_CLEAN_UP removeUnknown=$removeUnknown")
 
             val maxkeep = mCb.getKeepTracksCount()
 
             mDbHelper.writableDatabase.let { db ->
-                val to_del = ArrayList<String>()
+                val to_del = HashSet<String>()
                 val to_keep = HashSet<String>()
 
                 SQLiteContract.RecordingsTable.run {
@@ -174,7 +174,11 @@ class RecordingManagerService : Service() {
                         Log.d(TAG, "Row uuid=$uuid state=$state")
 
                         when {
-                            state == Recording.STATE_RECORDING -> to_del.add(uuid)
+                            state == Recording.STATE_RECORDING -> {
+                                if (removeUnknown) {
+                                    to_del.add(uuid)
+                                }
+                            }
                             !Files.exists(recordingPath(uuid)) -> to_del.add(uuid)
                             to_keep.size < maxkeep -> to_keep.add(uuid)
                             else -> to_del.add(uuid)
@@ -191,7 +195,12 @@ class RecordingManagerService : Service() {
                     for (path in Files.list(recordingsDir())) {
                         val basename = path.getFileName().toString()
                         Log.d(TAG, "see file $basename")
-                        if (!to_keep.contains(basename)) {
+                        val rem = if (removeUnknown) {
+                            !to_keep.contains(basename)
+                        } else {
+                            to_del.contains(basename)
+                        }
+                        if (rem) {
                             Log.d(TAG, "delete file $basename")
                             Files.delete(path)
                         }
@@ -201,9 +210,7 @@ class RecordingManagerService : Service() {
 
             Log.d(TAG, "Clean up done")
 
-            mHandler.post {
-                handleCmdFetchRecordings()
-            }
+            handleCmdFetchRecordings()
         }
 
         private fun handleCmdRequestNewRecording(cb: (Recording) -> Unit,
@@ -219,14 +226,14 @@ class RecordingManagerService : Service() {
             }
 
             Files.createDirectories(recordingsDir())
-            mHandler.postDelayed({
-                cb(r)
-                mCb.onNewRecording(r)
-            }, 10)
+
+            cb(r)
         }
 
         private fun handleCmdFinishRecording(r: Recording) {
             Log.i(TAG, "CMD_FINISH_RECORDING")
+
+            r.state = Recording.STATE_DONE
 
             mDbHelper.writableDatabase.let { db ->
                 SQLiteContract.RecordingsTable.run {
@@ -239,6 +246,8 @@ class RecordingManagerService : Service() {
             }
 
             mCb.onRecordingFinished(r)
+
+            handleCmdCleanUp(false)
         }
 
         fun handleMessage(msg: Message): Boolean {
@@ -248,7 +257,7 @@ class RecordingManagerService : Service() {
                     true
                 }
                 CMD_CLEAN_UP -> {
-                    handleCmdCleanUp()
+                    handleCmdCleanUp(true)
                     true
                 }
                 CMD_REQUEST_NEW_RECORDING -> {
@@ -323,17 +332,11 @@ class RecordingManagerService : Service() {
                 }
 
                 override fun onNewRecording(r: Recording) {
-                    val l = mRecordingsList.getValue()
-                    if (l != null) {
-                        l.add(r)
-                        mRecordingsList.postValue(l)
-                    } else {
-                        mRecordingsList.postValue(mutableListOf(r))
-                    }
+                    // TODO: remove this callback?
                 }
 
                 override fun onRecordingFinished(r: Recording) {
-                    mRecordingsList.postValue(mRecordingsList.getValue())
+                    // TODO: remove this callback?
                 }
 
                 override fun getKeepTracksCount(): Int {
