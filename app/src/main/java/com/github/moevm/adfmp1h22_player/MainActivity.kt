@@ -137,9 +137,6 @@ class MainActivity : AppCompatActivity() {
             }
             sb.service.mPlaybackState.observe(this@MainActivity) { stt ->
                 playbackModel.state.setValue(stt)
-                if (stt == PlaybackState.STOPPED) {
-                    setPlayingStation(null)
-                }
             }
             sb.service.mStation.observe(this@MainActivity) { s ->
                 playbackModel.station.setValue(s)
