@@ -854,6 +854,8 @@ class PlayerService : Service() {
                     Log.d(TAG, "bind completed")
                     mHandler.obtainMessage(CMD_SET_RECMSG_SERVICE, b.service)
                         .sendToTarget()
+
+                    b.service.cleanUpRecordings()
                 }
 
                 override fun onServiceDisconnected(m: ComponentName) {
