@@ -28,7 +28,8 @@ class StreamRecorder(
 
     interface Callback {
         fun onOpenChannel(r: Recording): AsynchronousFileChannel
-        fun onTrackDone(r: Recording, chan: AsynchronousFileChannel)
+        fun onTrackDone(r: Recording, chan: AsynchronousFileChannel,
+                        interrupted: Boolean)
         fun onStop()
     }
 
@@ -47,22 +48,26 @@ class StreamRecorder(
     private var chanbusyslot: ByteBuffer? = null
 
     private fun startNextTrack() {
-        val t = track
-        if (t != null) {
-            cb.onTrackDone(t.r, t.chan)
+        var next: Recording? = null
+        var intr = false
+
+        if (!trackqueue.isEmpty()) {
+            next = trackqueue.remove()
+            intr = next == null
         }
 
-        if (trackqueue.isEmpty()) {
-            Log.d(TAG, "no next track")
-            track = null
-        } else {
-            val r = trackqueue.remove()
-            if (r == null) {
-                doStop()
-            } else {
-                Log.d(TAG, "start new track $r")
-                setupRecording(r)
+        val t = track
+        if (t != null) {
+            cb.onTrackDone(t.r, t.chan, intr)
+        }
+
+        when {
+            next != null -> {
+                Log.d(TAG, "start new track $next")
+                setupRecording(next)
             }
+            intr -> doStop()
+            else -> Log.w(TAG, "next track requested but track queue empty")
         }
     }
 
@@ -193,8 +198,10 @@ class StreamRecorder(
     }
 
     fun onFrame(buf: ByteBuffer) {
-        val b = getChanBuffer(buf.remaining())
-        b.put(buf)
+        if (track != null) {
+            val b = getChanBuffer(buf.remaining())
+            b.put(buf)
+        }
     }
 
     fun onStop() {
