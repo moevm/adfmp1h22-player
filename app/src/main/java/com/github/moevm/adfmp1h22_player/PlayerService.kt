@@ -97,6 +97,21 @@ class PlayerService : Service() {
     val mMetaData = MutableLiveData<TrackMetaData>()
     val mPlaybackState = MutableLiveData<PlaybackState>()
     val mStation = MutableLiveData<Station>()
+    val mRecMgrConn = object : ServiceConnection {
+        override fun onServiceConnected(m: ComponentName, sb: IBinder) {
+            Log.i(TAG, "Service connected: $m")
+            val b = sb as RecordingManagerService.ServiceBinder
+            Log.d(TAG, "bind completed")
+            mHandler.obtainMessage(CMD_SET_RECMSG_SERVICE, b.service)
+                .sendToTarget()
+
+            b.service.cleanUpRecordings()
+        }
+
+        override fun onServiceDisconnected(m: ComponentName) {
+            Log.w(TAG, "Service disconnected: $m")
+        }
+    }
 
     class PlayerThread(
         private val userAgent: String,
@@ -847,21 +862,7 @@ class PlayerService : Service() {
 
         bindService(
             Intent(this, RecordingManagerService::class.java),
-            object : ServiceConnection {
-                override fun onServiceConnected(m: ComponentName, sb: IBinder) {
-                    Log.i(TAG, "Service connected: $m")
-                    val b = sb as RecordingManagerService.ServiceBinder
-                    Log.d(TAG, "bind completed")
-                    mHandler.obtainMessage(CMD_SET_RECMSG_SERVICE, b.service)
-                        .sendToTarget()
-
-                    b.service.cleanUpRecordings()
-                }
-
-                override fun onServiceDisconnected(m: ComponentName) {
-                    Log.w(TAG, "Service disconnected: $m")
-                }
-            },
+            mRecMgrConn,
             Context.BIND_AUTO_CREATE
         )
 
@@ -875,5 +876,6 @@ class PlayerService : Service() {
             mThread.interrupt()
             mThread.join()
         }
+        unbindService(mRecMgrConn)
     }
 }
