@@ -504,8 +504,10 @@ class PlayerService : Service() {
 
                                                 Log.d(TAG, "requesting recording for ${m.original}")
                                                 recmgr!!.requestNewRecording(m) { r ->
-                                                     Log.d(TAG, "new track: ${r.uuid}")
-                                                     streamrec!!.onNewTrack(r)
+                                                     handler.post {
+                                                         Log.d(TAG, "new track: ${r.uuid}")
+                                                         streamrec!!.onNewTrack(r)
+                                                     }
                                                 }
                                             }
 

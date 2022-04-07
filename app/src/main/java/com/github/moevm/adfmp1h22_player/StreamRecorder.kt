@@ -62,10 +62,7 @@ class StreamRecorder(
         }
 
         when {
-            next != null -> {
-                Log.d(TAG, "start new track $next")
-                setupRecording(next)
-            }
+            next != null -> setupRecording(next)
             intr -> doStop()
             else -> Log.w(TAG, "next track requested but track queue empty")
         }
@@ -172,6 +169,7 @@ class StreamRecorder(
     }
 
     private fun setupRecording(r: Recording) {
+        Log.d(TAG, "setup recording for ${r.uuid} / ${r.metadata.original}")
         val chan = cb.onOpenChannel(r)
         track = TrackInfo(r, chan, 0)
     }

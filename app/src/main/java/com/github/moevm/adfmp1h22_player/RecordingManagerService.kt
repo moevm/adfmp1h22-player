@@ -124,8 +124,8 @@ class RecordingManagerService : Service() {
                             COLUMN_TIMESTAMP,
                             COLUMN_STATE,
                         ),
-                        "$COLUMN_STATE != 0",
-                        arrayOf<String>(),
+                        "$COLUMN_STATE != ?",
+                        arrayOf<String>(Recording.STATE_RECORDING.toString()),
                         null,
                         null,
                         "$COLUMN_TIMESTAMP DESC"
@@ -133,7 +133,6 @@ class RecordingManagerService : Service() {
                     cur.moveToFirst()
                     while (! cur.isAfterLast()) {
                         val r = decodeRecording(cur)
-                        Log.d(TAG, "FETCH: $r")
                         l.add(r)
                         cur.moveToNext()
                     }
@@ -171,8 +170,6 @@ class RecordingManagerService : Service() {
                         val uuid = cur.getString(0)
                         val state = cur.getInt(2)
 
-                        Log.d(TAG, "Row uuid=$uuid state=$state")
-
                         when {
                             state == Recording.STATE_RECORDING -> {
                                 if (removeUnknown) {
@@ -194,7 +191,6 @@ class RecordingManagerService : Service() {
 
                     for (path in Files.list(recordingsDir())) {
                         val basename = path.getFileName().toString()
-                        Log.d(TAG, "see file $basename")
                         val rem = if (removeUnknown) {
                             !to_keep.contains(basename)
                         } else {
