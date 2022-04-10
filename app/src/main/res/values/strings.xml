@@ -22,7 +22,7 @@
         <item quantity="other">%d stations</item>
     </plurals>
     <string name="station_list_item_info">Station info"</string>
-    <string name="founded_stations">Stations found</string>
+    <string name="found_stations">Stations found</string>
     <string name="hello_blank_fragment">Hello blank fragment</string>
     <string name="station_name">Station name</string>
     <string name="station_home_page">Homepage</string>
