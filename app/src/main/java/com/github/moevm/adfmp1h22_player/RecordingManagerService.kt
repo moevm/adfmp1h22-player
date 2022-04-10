@@ -1,5 +1,14 @@
 package com.github.moevm.adfmp1h22_player
 
+import android.provider.DocumentsContract
+import java.nio.ByteBuffer
+import java.nio.channels.FileChannel
+import android.os.ParcelFileDescriptor
+import java.io.IOException
+import java.nio.file.StandardOpenOption
+import java.io.FileOutputStream
+import android.net.Uri
+
 import android.util.Log
 
 import java.util.HashSet
@@ -47,15 +56,20 @@ class RecordingManagerService : Service() {
         val TAG = "RecordingManagerService"
 
         val KEY_METADATA = "metadata"
+        val KEY_RECORDING = "recording"
+        val KEY_DIRECTORY_URI = "directiry_uri"
 
         val PATH_PREFIX = "rec/"
+
+        val TRANSFER_BUFFER_SIZE = 1*1024*1024 // 1 MiB
     }
 
     lateinit var mThread: ManagerThread
     lateinit var mHandler: Handler
 
     lateinit var mStorageDir: String
-    val mRecordingsList = MutableLiveData<MutableList<Recording>>(ArrayList<Recording>())
+    val mRecordingsList =
+        MutableLiveData<MutableList<Recording>>(ArrayList<Recording>())
 
     class ManagerThread(
         private val mDbHelper: SQLHelper,
@@ -68,6 +82,11 @@ class RecordingManagerService : Service() {
             fun onNewRecording(r: Recording)
             fun onRecordingFinished(r: Recording)
             fun getKeepTracksCount(): Int
+            fun createFile(
+                treeuri: Uri,
+                mime: String,
+                dispname: String,
+            ): ParcelFileDescriptor?
         }
 
         lateinit var mHandler: Handler
@@ -246,6 +265,57 @@ class RecordingManagerService : Service() {
             handleCmdCleanUp(false)
         }
 
+        private fun handleCmdSaveRecording(uri: Uri, r: Recording,
+                                           cb: (Boolean) -> Unit) {
+            Log.i(TAG,
+                  "CMD_SAVE_RECORDING to=$uri r=${r.uuid}/${r.metadata.original}")
+
+            val outpfd = mCb.createFile(
+                uri,
+                "audio/mpeg",
+                r.metadata.original,
+            )
+            val outfd = outpfd?.getFileDescriptor()
+
+            if (outfd == null) {
+                // TODO: report error
+                cb(false)
+                return
+            }
+
+            val outch = FileOutputStream(outfd).getChannel()
+
+            val uuid = r.uuid.toString()
+            val inch = FileChannel.open(recordingPath(uuid),
+                                        StandardOpenOption.READ)
+
+            val buf = ByteBuffer.allocate(TRANSFER_BUFFER_SIZE)
+
+            try {
+                while (true) {
+                    buf.clear()
+                    val n = inch.read(buf)
+                    Log.d(TAG, "read $n")
+
+                    if (n == -1) {
+                        break
+                    }
+                    buf.flip()
+
+                    while (buf.hasRemaining()) {
+                        val m = outch.write(buf)
+                        Log.d(TAG, "write $m")
+                    }
+                }
+            } catch (e: IOException) {
+                Log.e(TAG, "error while saving file to user dir", e)
+                cb(false)
+                return
+            }
+
+            cb(true)
+        }
+
         fun handleMessage(msg: Message): Boolean {
             return when (msg.what) {
                 CMD_FETCH_RECORDINGS -> {
@@ -271,8 +341,15 @@ class RecordingManagerService : Service() {
                     true
                 }
                 CMD_SAVE_RECORDING -> {
-                    // NOTE: should accept callback
-                    Log.w(TAG, "CMD_SAVE_RECORDING not implemented")
+                    val cb = msg.obj as (Boolean) -> Unit
+                    val r = msg.getData()
+                        .getParcelable<Recording>(KEY_RECORDING)!!
+                    val saveurl = msg.getData()
+                        .getCharSequence(KEY_DIRECTORY_URI)!!.toString()
+
+                    val uri = Uri.parse(saveurl)!!
+
+                    handleCmdSaveRecording(uri, r, cb)
                     true
                 }
                 else -> false
@@ -298,7 +375,14 @@ class RecordingManagerService : Service() {
             .sendToTarget()
     }
 
-    // TODO: saveRecording
+    fun saveRecording(uri: Uri, r: Recording, cb: (Boolean) -> Unit) {
+        val m = mHandler.obtainMessage(CMD_SAVE_RECORDING, cb)
+        m.setData(Bundle().also {
+                      it.putCharSequence(KEY_DIRECTORY_URI, uri.toString())
+                      it.putParcelable(KEY_RECORDING, r)
+        })
+        m.sendToTarget()
+    }
 
     fun cleanUpRecordings() {
         mHandler.obtainMessage(CMD_CLEAN_UP)
@@ -340,6 +424,37 @@ class RecordingManagerService : Service() {
                         getSharedPreferences("Table", Context.MODE_PRIVATE)!!
                     return pref.getInt("progress", 10)
                 }
+
+                override fun createFile(
+                    treeuri: Uri,
+                    mime: String,
+                    dispname: String,
+                ): ParcelFileDescriptor? {
+
+                    Log.d(TAG, "mime:     $mime")
+                    Log.d(TAG, "dispname: $dispname")
+
+                    val cr = getContentResolver()
+
+                    val dirdocid = DocumentsContract.getTreeDocumentId(treeuri)
+                    val diruri = DocumentsContract
+                        .buildDocumentUriUsingTree(treeuri, dirdocid)
+
+                    Log.d(TAG, "dirdocid: $dirdocid")
+                    Log.d(TAG, "diruri:   $diruri")
+
+                    val docuri = DocumentsContract
+                        .createDocument(cr, diruri, mime, dispname)
+                    if (docuri == null) {
+                        Log.d(TAG, "createDocument => null")
+                        return null
+                    }
+
+                    Log.d(TAG, "docuri:   $docuri")
+
+                    return cr.openFileDescriptor(docuri, "w")
+                }
+
             }
         )
         mThread.start()

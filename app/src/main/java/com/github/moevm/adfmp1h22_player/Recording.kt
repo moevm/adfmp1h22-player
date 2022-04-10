@@ -7,13 +7,14 @@ import android.os.Parcelable
 
 import kotlinx.android.parcel.Parcelize
 
+@Parcelize
 data class Recording(val uuid: UUID,
                      val metadata: TrackMetaData,
                      val timestamp: Instant,
                      var state: Int,
                      // TODO: duration
                      // TODO: station info
-) {
+): Parcelable {
     companion object {
         const val STATE_RECORDING = 0
         const val STATE_DONE = 1

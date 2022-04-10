@@ -95,6 +95,8 @@ class SettingsActivity : AppCompatActivity() {
             if(isStoragePermissionGranted()){
                 Log.d(TAG, "OPEN FILES MANAGER")
                 var intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
+                intent.setFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+
                 startActivityForResult(intent, 1)
             }
         }
@@ -127,9 +129,15 @@ class SettingsActivity : AppCompatActivity() {
             1 -> {
                 val url = data?.getData()
                 if (url != null) {
-                    Log.d(TAG, "url = $url")
+                    Log.d(TAG, "set save folder: $url")
                     pref.edit().putString("folder", url.toString()).apply()
                     updateSaveFolderButtonName(url)
+
+                    val cr = getContentResolver()
+                    cr.takePersistableUriPermission(
+                        url,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION
+                        or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
                 }
             }
         }
