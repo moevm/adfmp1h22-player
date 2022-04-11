@@ -53,45 +53,48 @@ class StationCatalogueUpdaterService : Service() {
 
         val stL = ArrayList<Station>()
         GlobalScope.launch{
-            val call: Call<AddStationList?>? = apiInterface!!.AddStationListResources()
-            Log.d("TAG", call?.request()?.headers.toString())
-            call?.enqueue(object  : Callback<AddStationList?> {
-                override fun onResponse(
-                    call: Call<AddStationList?>,
-                    response: Response<AddStationList?>
-                ) {
-                    Log.d("TAG", response.code().toString())
-                    val resource: AddStationList? = response.body()
-                    if(resource != null){
-                        stL.clear()
-                        var progress = resource.size - 1
-                        for (i in 0..progress) {
-                            val station = Station(
-                                resource[i].changeuuid.toString(),
-                                resource[i].stationuuid.toString(),
-                                resource[i].name.toString(),
-                                resource[i].url.toString(),
-                                resource[i].favicon.toString(),
-                            )
-                            stL.add(station)
-                        }
-                        val t : Thread = object  : Thread(){
-                            override fun run(){
-                                manager.insertRows(stL)
+            if(manager.emptyTable(SQLiteContract.AllStationsTable.TABLE_NAME)){
+                Log.d("TAG", "in EMPTY TABLE")
+                val call: Call<AddStationList?>? = apiInterface!!.AddStationListResources()
+                Log.d("TAG", call?.request()?.headers.toString())
+                call?.enqueue(object  : Callback<AddStationList?> {
+                    override fun onResponse(
+                        call: Call<AddStationList?>,
+                        response: Response<AddStationList?>
+                    ) {
+                        Log.d("TAG", response.code().toString())
+                        val resource: AddStationList? = response.body()
+                        if(resource != null){
+                            stL.clear()
+                            var progress = resource.size - 1
+                            for (i in 0..progress) {
+                                val station = Station(
+                                    resource[i].changeuuid.toString(),
+                                    resource[i].stationuuid.toString(),
+                                    resource[i].name.toString(),
+                                    resource[i].url.toString(),
+                                    resource[i].favicon.toString(),
+                                )
+                                stL.add(station)
+                            }
+                            val t : Thread = object  : Thread(){
+                                override fun run(){
+                                    manager.insertRows(stL)
 //                                manager.deleteTable("AllStations")
 //                                manager.replace("AllStations_new", "AllStations")
+                                }
                             }
+                            t.start()
                         }
-                        t.start()
+                        else{
+                            Log.d("TAG", "Error in StationListFragmrnt.kt")
+                        }
                     }
-                    else{
-                        Log.d("TAG", "Error in StationListFragmrnt.kt")
+                    override fun onFailure(call: Call<AddStationList?>, t: Throwable) {
+                        call.cancel()
                     }
-                }
-                override fun onFailure(call: Call<AddStationList?>, t: Throwable) {
-                    call.cancel()
-                }
-            })
+                })
+            }
         }
     }
 

@@ -14,7 +14,6 @@ class SQLiteAllStationsManager(
     fun emptyTable(tableName : String) : Boolean{
         val db = db.writableDatabase
         var empty : Boolean = true
-        Log.d("TAG", "in EMPTY TABLE")
         val cursor : Cursor = db.rawQuery("SELECT count(*) FROM ${tableName}", null)
         cursor.moveToFirst()
         val d : Int = cursor.getInt(0)
