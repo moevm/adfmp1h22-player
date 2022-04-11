@@ -245,20 +245,25 @@ class RecordingManagerService : Service() {
             cb(r)
         }
 
-        private fun handleCmdFinishRecording(r: Recording) {
-            Log.i(TAG, "CMD_FINISH_RECORDING")
+        private fun updateRecordingState(r: Recording, s: Int) {
 
-            r.state = Recording.STATE_DONE
+            r.state = s
 
             mDbHelper.writableDatabase.let { db ->
                 SQLiteContract.RecordingsTable.run {
                     val cv = ContentValues()
-                    cv.put(COLUMN_STATE, Recording.STATE_DONE)
+                    cv.put(COLUMN_STATE, s)
                     db.update(TABLE_NAME, cv,
                               "$COLUMN_UUID = ?",
                               arrayOf(r.uuid.toString()))
                 }
             }
+        }
+
+        private fun handleCmdFinishRecording(r: Recording) {
+            Log.i(TAG, "CMD_FINISH_RECORDING")
+
+            updateRecordingState(r, State.STATE_DONE)
 
             mCb.onRecordingFinished(r)
 
@@ -312,6 +317,8 @@ class RecordingManagerService : Service() {
                 cb(false)
                 return
             }
+
+            updateRecordingState(r, State.STATE_SAVED)
 
             cb(true)
         }
