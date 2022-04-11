@@ -73,7 +73,6 @@ class PlayerService : Service() {
         val CMD_PAUSE_PLAYBACK = 2
         val CMD_RESUME_PLAYBACK = 3
         val CMD_DEBUG_INFO = 10
-        val CMD_SET_RECMSG_SERVICE = 20
 
         val TAG = "PlayerService"
         val NOTIF_CHANNEL_ID = "main"
@@ -92,24 +91,45 @@ class PlayerService : Service() {
 
     class TerminationMarker : Throwable()
 
+    lateinit var mMainHandler: Handler
+
+    var mAudioSid: Int = -1
     lateinit var mThread: PlayerThread
     lateinit var mHandler: Handler
     val mMetaData = MutableLiveData<TrackMetaData>()
     val mPlaybackState = MutableLiveData<PlaybackState>(PlaybackState.STOPPED)
     val mStation = MutableLiveData<Station>()
-    val mRecMgrConn = object : ServiceConnection {
-        override fun onServiceConnected(m: ComponentName, sb: IBinder) {
-            Log.i(TAG, "Service connected: $m")
-            val b = sb as RecordingManagerService.ServiceBinder
-            Log.d(TAG, "bind completed")
-            mHandler.obtainMessage(CMD_SET_RECMSG_SERVICE, b.service)
-                .sendToTarget()
+    val mRecMgrConn = RecMgrSvrConnection()
 
-            b.service.cleanUpRecordings()
+    inner class RecMgrSvrConnection : ServiceConnection {
+        private var mServiceBinder: RecordingManagerService.ServiceBinder? = null
+        private val mCallbackQueue =
+            LinkedList<(RecordingManagerService) -> Unit>()
+
+        override fun onServiceConnected(m: ComponentName, sb: IBinder) {
+            Log.i(TAG, "recmgr svc connected: $m")
+            mServiceBinder = sb as RecordingManagerService.ServiceBinder
+
+            sb.service.cleanUpRecordings()
+
+            while (!mCallbackQueue.isEmpty()) {
+                val cb = mCallbackQueue.remove()
+                cb(sb.service)
+            }
         }
 
         override fun onServiceDisconnected(m: ComponentName) {
-            Log.w(TAG, "Service disconnected: $m")
+            mServiceBinder = null
+            Log.w(TAG, "recmgr svc disconnected: $m")
+        }
+
+        fun doAction(cb: (RecordingManagerService) -> Unit) {
+            val b = mServiceBinder
+            if (b != null) {
+                cb(b.service)
+            } else {
+                mCallbackQueue.add(cb)
+            }
         }
     }
 
@@ -128,6 +148,10 @@ class PlayerService : Service() {
             // -- e.g. unknown format, unsupported transport, network
             // unreachable, connection refused, programming error
             fun onError(e: Throwable)
+
+            fun requestRecMgrSvc(cb: (RecordingManagerService) -> Unit)
+
+            fun requestRestart()
         }
 
         private class Frame(
@@ -186,6 +210,7 @@ class PlayerService : Service() {
             if (lastStation != null) {
                 cb.onStationLoading(null)
             }
+            lastStation = null
 
             metaint = null
             content_type = null
@@ -211,7 +236,6 @@ class PlayerService : Service() {
             streamrec = null
 
             player?.let {
-                cb.onPlaybackStateChanged(PlaybackState.STOPPED)
                 it.release()
             }
             player = null
@@ -229,6 +253,8 @@ class PlayerService : Service() {
             sample_rate = -1
             max_frames = 0
             max_frames_soft = 0
+
+            cb.onPlaybackStateChanged(PlaybackState.STOPPED)
         }
 
         private fun setupPlayer(fmt: MediaFormat) {
@@ -706,21 +732,15 @@ class PlayerService : Service() {
                     streamrec?.debugInfo()
                     true
                 }
-                CMD_SET_RECMSG_SERVICE -> {
-                    Log.d(TAG, "received recmgr")
-                    recmgr = msg.obj as RecordingManagerService
-
-                    wantStart?.let {
-                        startPlayingUrl(it)
-                    }
-                    wantStart = null
-                    true
-                }
                 else -> false
             }
         }
 
         override fun run() {
+            var err = false
+
+            Log.d(TAG, "starting PlayerThread")
+
             hc = HttpClient()
             hc.setIdleTimeout(IDLE_TIMEOUT)
             hc.start()
@@ -729,6 +749,7 @@ class PlayerService : Service() {
             } catch (e: Exception) {
                 Log.e(TAG, "Uncaught exception in PlayerThread", e)
                 cb.onError(e)
+                err = true
             }
             Log.d(TAG, "out of looper")
 
@@ -737,11 +758,27 @@ class PlayerService : Service() {
             freelist.clear()
 
             hc.stop()
-            Log.d(TAG, "Stopping PlayerThread")
+            Log.d(TAG, "stopping PlayerThread")
+
+            if (err) {
+                cb.requestRestart()
+            }
         }
 
         override protected fun onLooperPrepared() {
             handler = Handler(looper)
+
+            cb.requestRecMgrSvc { svc ->
+                handler.post {
+                    Log.d(TAG, "received recmgr")
+                    recmgr = svc
+
+                    wantStart?.let {
+                        startPlayingUrl(it)
+                    }
+                    wantStart = null
+                }
+            }
         }
     }
 
@@ -778,6 +815,10 @@ class PlayerService : Service() {
 
     private fun onPlaybackStateChanged(ps: PlaybackState) {
         val old = mPlaybackState.getValue()
+        if (old == ps) {
+            return
+        }
+
         mPlaybackState.postValue(ps)
 
         Log.d(TAG, "playback state: $old -> $ps")
@@ -841,12 +882,9 @@ class PlayerService : Service() {
         return notif
     }
 
-    override fun onCreate() {
-        val am = getSystemService(AudioManager::class.java)
-        val sid = am.generateAudioSessionId()
-
+    private fun setupThread() {
         mThread = PlayerThread(
-            resources.getString(R.string.user_agent), sid,
+            resources.getString(R.string.user_agent), mAudioSid,
             object : PlayerThread.Callback {
                 override fun onMetaData(m: TrackMetaData) {
                     this@PlayerService.onMetaData(m)
@@ -867,10 +905,32 @@ class PlayerService : Service() {
                     ).show()
                     // We’ll get an onPlaybackStateChanged as well
                 }
+
+                override fun requestRecMgrSvc(
+                    cb: (RecordingManagerService) -> Unit,
+                ) {
+                    mRecMgrConn.doAction(cb)
+                }
+
+                override fun requestRestart() {
+                    mMainHandler.post {
+                        Log.i(TAG, "reinit PlayerThread")
+                        setupThread()
+                    }
+                }
             }
         )
         mThread.start()
         mHandler = Handler(mThread.looper, mThread::handleMessage)
+    }
+
+    override fun onCreate() {
+        val am = getSystemService(AudioManager::class.java)
+
+        mMainHandler = Handler(getMainLooper())
+
+        mAudioSid = am.generateAudioSessionId()
+        setupThread()
 
         bindService(
             Intent(this, RecordingManagerService::class.java),

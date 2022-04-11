@@ -24,6 +24,10 @@ import android.os.IBinder
 
 class MainActivity : AppCompatActivity() {
 
+    companion object {
+        const val TAG = "MainActivity"
+    }
+
     private var current_station: Station? = null
 
     private val playbackModel: PlaybackModel by viewModels()
@@ -73,11 +77,11 @@ class MainActivity : AppCompatActivity() {
             }
         )
 
-        Log.d("LIFECYCLE", "creating main activity with $savedInstanceState")
+        Log.d(TAG, "creating main activity with $savedInstanceState")
         pager.setCurrentItem(savedInstanceState?.getInt("page") ?: 1, false)
 
         playbackModel.station.observe(this) { s ->
-            Log.d("APPDEBUG", "main activity station $s")
+            Log.d(TAG, "main activity station $s")
             if (s == null) {
                 pager.setCurrentItem(1)
             } else {
@@ -92,7 +96,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
-        Log.d("LIFECYCLE", "saving main activity")
+        Log.d(TAG, "saving main activity")
         outState.putInt("page", pager.currentItem)
     }
 
@@ -149,6 +153,7 @@ class MainActivity : AppCompatActivity() {
 
         override fun onServiceDisconnected(n: ComponentName) {
             mServiceBinder = null;
+            Log.e(TAG, "onServiceDisconnected")
         }
 
         fun doAction(cb: (PlayerService) -> Unit) {
