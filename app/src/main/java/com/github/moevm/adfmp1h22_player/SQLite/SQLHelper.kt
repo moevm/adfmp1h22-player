@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS $TABLE_NAME (
   $COLUMN_MIME_TYPE       TEXT NOT NULL,
   $COLUMN_STATE           INTEGER NOT NULL
 )
-"""})
+""" })
 
     }
 
