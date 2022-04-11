@@ -11,6 +11,7 @@ import kotlinx.android.parcel.Parcelize
 data class Recording(val uuid: UUID,
                      val metadata: TrackMetaData,
                      val timestamp: Instant,
+                     val mime: String,
                      var state: Int,
                      // TODO: duration
                      // TODO: station info

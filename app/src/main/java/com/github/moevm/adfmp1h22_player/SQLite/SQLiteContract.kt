@@ -31,6 +31,8 @@ object SQLiteContract {
         const val COLUMN_TIMESTAMP = "timestamp"
         // Java timestamp: ms from Epoch
 
+        const val COLUMN_MIME_TYPE = "mime"
+
         const val COLUMN_STATE = "state"
         // 0: recording
         // 1: done

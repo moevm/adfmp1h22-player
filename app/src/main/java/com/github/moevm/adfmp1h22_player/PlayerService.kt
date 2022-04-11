@@ -503,7 +503,7 @@ class PlayerService : Service() {
                                                 // first song, should we?
 
                                                 Log.d(TAG, "requesting recording for ${m.original}")
-                                                recmgr!!.requestNewRecording(m) { r ->
+                                                recmgr!!.requestNewRecording(m, "audio/mpeg") { r ->
                                                      handler.post {
                                                          Log.d(TAG, "new track: ${r.uuid}")
                                                          streamrec!!.onNewTrack(r)

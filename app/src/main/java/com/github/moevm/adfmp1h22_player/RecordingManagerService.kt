@@ -56,6 +56,7 @@ class RecordingManagerService : Service() {
         val TAG = "RecordingManagerService"
 
         val KEY_METADATA = "metadata"
+        val KEY_MIME_TYPE = "mime_type"
         val KEY_RECORDING = "recording"
         val KEY_DIRECTORY_URI = "directiry_uri"
 
@@ -109,7 +110,8 @@ class RecordingManagerService : Service() {
                               else cur.getString(2)),
                 ),
                 timestamp = Instant.ofEpochMilli(cur.getLong(4)),
-                state = cur.getInt(5),
+                mime = cur.getString(5),
+                state = cur.getInt(6),
             )
         }
 
@@ -121,6 +123,7 @@ class RecordingManagerService : Service() {
                 cv.put(COLUMN_TRACK_ARTIST, r.metadata.artist)
                 cv.put(COLUMN_TRACK_TITLE, r.metadata.title)
                 cv.put(COLUMN_TIMESTAMP, r.timestamp.toEpochMilli())
+                cv.put(COLUMN_MIME_TYPE, r.mime)
                 cv.put(COLUMN_STATE, r.state)
                 return cv
             }
@@ -141,6 +144,7 @@ class RecordingManagerService : Service() {
                             COLUMN_TRACK_ARTIST,
                             COLUMN_TRACK_TITLE,
                             COLUMN_TIMESTAMP,
+                            COLUMN_MIME_TYPE,
                             COLUMN_STATE,
                         ),
                         "$COLUMN_STATE != ?",
@@ -229,10 +233,11 @@ class RecordingManagerService : Service() {
         }
 
         private fun handleCmdRequestNewRecording(cb: (Recording) -> Unit,
-                                                 md: TrackMetaData) {
+                                                 md: TrackMetaData,
+                                                 mime: String) {
             Log.i(TAG, "CMD_REQUEST_NEW_RECORDING")
 
-            val r = Recording(UUID.randomUUID(), md, Instant.now(),
+            val r = Recording(UUID.randomUUID(), md, Instant.now(), mime,
                               Recording.STATE_RECORDING)
 
             mDbHelper.writableDatabase.let { db ->
@@ -263,7 +268,7 @@ class RecordingManagerService : Service() {
         private fun handleCmdFinishRecording(r: Recording) {
             Log.i(TAG, "CMD_FINISH_RECORDING")
 
-            updateRecordingState(r, State.STATE_DONE)
+            updateRecordingState(r, Recording.STATE_DONE)
 
             mCb.onRecordingFinished(r)
 
@@ -275,11 +280,7 @@ class RecordingManagerService : Service() {
             Log.i(TAG,
                   "CMD_SAVE_RECORDING to=$uri r=${r.uuid}/${r.metadata.original}")
 
-            val outpfd = mCb.createFile(
-                uri,
-                "audio/mpeg",
-                r.metadata.original,
-            )
+            val outpfd = mCb.createFile(uri, r.mime, r.metadata.original)
             val outfd = outpfd?.getFileDescriptor()
 
             if (outfd == null) {
@@ -318,7 +319,7 @@ class RecordingManagerService : Service() {
                 return
             }
 
-            updateRecordingState(r, State.STATE_SAVED)
+            updateRecordingState(r, Recording.STATE_SAVED)
 
             cb(true)
         }
@@ -337,8 +338,10 @@ class RecordingManagerService : Service() {
                     val cb = msg.obj as (Recording) -> Unit
                     val md = msg.getData()
                         .getParcelable<TrackMetaData>(KEY_METADATA)!!
+                    val mime = msg.getData()
+                        .getCharSequence(KEY_MIME_TYPE).toString()
 
-                    handleCmdRequestNewRecording(cb, md)
+                    handleCmdRequestNewRecording(cb, md, mime)
                     true
                 }
                 CMD_FINISH_RECORDING -> {
@@ -369,10 +372,13 @@ class RecordingManagerService : Service() {
 
     }
 
-    fun requestNewRecording(md: TrackMetaData, cb: (Recording) -> Unit) {
+    fun requestNewRecording(md: TrackMetaData,
+                            mime: String,
+                            cb: (Recording) -> Unit) {
         val m = mHandler.obtainMessage(CMD_REQUEST_NEW_RECORDING, cb)
         m.setData(Bundle().also {
                       it.putParcelable(KEY_METADATA, md)
+                      it.putCharSequence(KEY_MIME_TYPE, mime)
         })
         m.sendToTarget()
     }
