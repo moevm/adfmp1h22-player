@@ -197,7 +197,12 @@ class PlayerService : Service() {
                 2 -> AudioFormat.CHANNEL_OUT_STEREO
                 else -> AudioFormat.CHANNEL_OUT_STEREO // idk
             }
-            val enc = fmt.getInteger(MediaFormat.KEY_PCM_ENCODING)
+            for (k in fmt.keys) {
+                Log.d(TAG, "fmt key $k")
+            }
+            // val enc = fmt.getInteger(MediaFormat.KEY_PCM_ENCODING)
+            val enc = AudioFormat.ENCODING_PCM_16BIT
+            // Log.d(TAG, "pcm enc $enc")
             val at = AudioTrack.Builder()
                 .setAudioAttributes(
                     AudioAttributes.Builder()
@@ -247,6 +252,7 @@ class PlayerService : Service() {
                         "audio/mpeg",
                         freq, channels,
                     )
+                    fmt.setInteger(MediaFormat.KEY_PCM_ENCODING, AudioFormat.ENCODING_PCM_16BIT)
                     var endflag = false
                     var timestamp = 0.toLong()
                     mc.setCallback(
