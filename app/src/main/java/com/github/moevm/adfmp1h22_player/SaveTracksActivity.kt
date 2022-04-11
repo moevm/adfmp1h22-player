@@ -42,6 +42,12 @@ class SaveTracksActivity : AppCompatActivity() {
             Log.d(TAG, "set save folder: $uri")
             mPref.edit().putString("folder", uri.toString()).apply()
 
+            val cr = getContentResolver()
+            cr.takePersistableUriPermission(
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION
+                or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+
             while (!mSaveQueue.isEmpty()) {
                 val cb = mSaveQueue.remove()
                 cb(uri)
