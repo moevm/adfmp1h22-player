@@ -95,7 +95,7 @@ class PlayerService : Service() {
     lateinit var mThread: PlayerThread
     lateinit var mHandler: Handler
     val mMetaData = MutableLiveData<TrackMetaData>()
-    val mPlaybackState = MutableLiveData<PlaybackState>()
+    val mPlaybackState = MutableLiveData<PlaybackState>(PlaybackState.STOPPED)
     val mStation = MutableLiveData<Station>()
     val mRecMgrConn = object : ServiceConnection {
         override fun onServiceConnected(m: ComponentName, sb: IBinder) {
@@ -784,18 +784,20 @@ class PlayerService : Service() {
 
         // TODO: update notification
 
-        val oldfg = old != PlaybackState.STOPPED
-        val newfg = ps != PlaybackState.STOPPED
+        if (old != null) {
+            val oldfg = old != PlaybackState.STOPPED
+            val newfg = ps != PlaybackState.STOPPED
 
-        when {
-             oldfg && !newfg -> {
-                 stopForeground(Service.STOP_FOREGROUND_REMOVE)
-             }
-             !oldfg && newfg -> {
-                 // TODO: do this while *requesting* a new playing state?
-                 val notif = makeNotification()
-                 startForeground(NOTIF_ID, notif)
-             }
+            when {
+                oldfg && !newfg -> {
+                    stopForeground(Service.STOP_FOREGROUND_REMOVE)
+                }
+                !oldfg && newfg -> {
+                    // TODO: do this while *requesting* a new playing state?
+                    val notif = makeNotification()
+                    startForeground(NOTIF_ID, notif)
+                }
+            }
         }
     }
 
