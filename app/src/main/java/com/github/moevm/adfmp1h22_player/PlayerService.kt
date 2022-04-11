@@ -675,7 +675,6 @@ class PlayerService : Service() {
                     if (r.getRequestFailure() == null
                         && r.getResponseFailure() is TerminationMarker) {
                         Log.i(TAG, "HTTP Response terminated")
-                        return@post
                     } else if (r.isFailed()) {
                         try {
                             Log.w(TAG, "http failed")
@@ -692,6 +691,8 @@ class PlayerService : Service() {
                             cb.onError(e)
                         }
                     }
+
+                    reset()
                 }
             }
         }
