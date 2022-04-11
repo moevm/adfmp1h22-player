@@ -1,5 +1,11 @@
 package com.github.moevm.adfmp1h22_player
 
+import java.nio.channels.AsynchronousFileChannel
+import java.nio.file.StandardOpenOption
+
+import android.content.ComponentName
+import android.content.ServiceConnection
+
 import org.eclipse.jetty.util.Promise
 import org.eclipse.jetty.client.api.Request
 import org.eclipse.jetty.client.api.Connection
@@ -67,6 +73,7 @@ class PlayerService : Service() {
         val CMD_PAUSE_PLAYBACK = 2
         val CMD_RESUME_PLAYBACK = 3
         val CMD_DEBUG_INFO = 10
+        val CMD_SET_RECMSG_SERVICE = 20
 
         val TAG = "PlayerService"
         val NOTIF_CHANNEL_ID = "main"
@@ -89,6 +96,22 @@ class PlayerService : Service() {
     lateinit var mHandler: Handler
     val mMetaData = MutableLiveData<TrackMetaData>()
     val mPlaybackState = MutableLiveData<PlaybackState>()
+    val mStation = MutableLiveData<Station>()
+    val mRecMgrConn = object : ServiceConnection {
+        override fun onServiceConnected(m: ComponentName, sb: IBinder) {
+            Log.i(TAG, "Service connected: $m")
+            val b = sb as RecordingManagerService.ServiceBinder
+            Log.d(TAG, "bind completed")
+            mHandler.obtainMessage(CMD_SET_RECMSG_SERVICE, b.service)
+                .sendToTarget()
+
+            b.service.cleanUpRecordings()
+        }
+
+        override fun onServiceDisconnected(m: ComponentName) {
+            Log.w(TAG, "Service disconnected: $m")
+        }
+    }
 
     class PlayerThread(
         private val userAgent: String,
@@ -99,6 +122,7 @@ class PlayerService : Service() {
         interface Callback {
             fun onMetaData(m: TrackMetaData)
             fun onPlaybackStateChanged(ps: PlaybackState)
+            fun onStationLoading(s: Station?)
 
             // TODO: some kind of details enum to specify kind of error
             // -- e.g. unknown format, unsupported transport, network
@@ -108,7 +132,7 @@ class PlayerService : Service() {
 
         private class Frame(
             public val buf: ByteBuffer,
-            public var meta: String?,
+            public var meta: TrackMetaData?,
         ) {
             fun clear() {
                 buf.clear()
@@ -118,7 +142,7 @@ class PlayerService : Service() {
 
         private class MetaDataRecord(
             public val timestamp: Long,
-            public val meta: String,
+            public val meta: TrackMetaData,
         )
 
         private lateinit var hc: HttpClient
@@ -136,12 +160,17 @@ class PlayerService : Service() {
 
         // HTTP threads only
         private var current_frame: Frame? = null
-        private var current_meta: String? = null
+        private var current_meta: TrackMetaData? = null
 
         private var decoder_codec: MediaCodec? = null
         private var decoder_ks: (() -> Unit)? = null
         private var player: AudioTrack? = null
         private var paused_bufsize: Int? = null
+
+        private var wantStart: Station? = null
+        private var lastStation: Station? = null
+        private var recmgr: RecordingManagerService? = null
+        private var streamrec: StreamRecorder? = null
 
         private val metaqueue = LinkedList<MetaDataRecord>()
         private var sample_rate: Int = -1
@@ -153,6 +182,10 @@ class PlayerService : Service() {
         private var stat_small_buffer: Int = 0
 
         fun reset() {
+            if (lastStation != null) {
+                cb.onStationLoading(null)
+            }
+
             metaint = null
             content_type = null
             decoder = null
@@ -173,7 +206,13 @@ class PlayerService : Service() {
 
             paused_bufsize = null
 
-            player?.release()
+            streamrec?.onStop()
+            streamrec = null
+
+            player?.let {
+                cb.onPlaybackStateChanged(PlaybackState.STOPPED)
+                it.release()
+            }
             player = null
 
             decoder_ks?.let { it() }
@@ -290,6 +329,7 @@ class PlayerService : Service() {
                                 val can_give = ps == null || bqueue.size > ps
                                 val inf = if (can_give) { bqueue.poll() }
                                           else { null }
+                                val t = timestamp
                                 if (inf != null) {
                                     if (inf.buf.remaining() <= buf.remaining()) {
                                         buf.put(inf.buf)
@@ -297,6 +337,8 @@ class PlayerService : Service() {
                                             metaqueue.add(MetaDataRecord(timestamp, it))
                                         }
                                         freelist.add(inf)
+
+                                        timestamp += MP3_SAMPLES_PER_FRAME * 1000000 / sample_rate
                                     } else {
                                         Log.w(TAG, "onIBA: MediaCodec buffer too small")
                                     }
@@ -309,10 +351,7 @@ class PlayerService : Service() {
                                 val n = buf.position()
                                 buf.rewind()
 
-                                mc.queueInputBuffer(index, 0, n, timestamp, 0)
-
-                                timestamp += MP3_SAMPLES_PER_FRAME * 1000000 / sample_rate
-
+                                mc.queueInputBuffer(index, 0, n, t, 0)
                             }
 
                             override fun onOutputBufferAvailable(
@@ -324,6 +363,7 @@ class PlayerService : Service() {
                                 if (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) {
                                     mc.releaseOutputBuffer(index, false)
                                     mc.release()
+                                    // TODO: stream recorder onStop
                                     return
                                 }
 
@@ -333,9 +373,7 @@ class PlayerService : Service() {
 
                                 while (!metaqueue.isEmpty()
                                        && info.presentationTimeUs >= metaqueue.get(0).timestamp) {
-                                    val mp = metaqueue.remove()
-                                    val m = parseTrackTitle(mp.meta)
-                                    cb.onMetaData(m)
+                                    cb.onMetaData(metaqueue.remove().meta)
                                 }
 
                                 val buf = mc.getOutputBuffer(index)
@@ -351,6 +389,7 @@ class PlayerService : Service() {
                                             at.play()
                                         }
                                         at.write(buf, buf.remaining(), AudioTrack.WRITE_BLOCKING)
+                                        buf.rewind()
                                     }
                                 }
 
@@ -460,13 +499,27 @@ class PlayerService : Service() {
                                     current_frame?.also { frm ->
                                         val n = frm.buf.position()
                                         if (n > 0) {
-                                            current_meta?.let {
-                                                frm.meta = it
+                                            current_meta?.let { m ->
+                                                frm.meta = m
                                                 current_meta = null
+
+                                                // TODO: if first metadata string,
+                                                // we may be joining in the middle
+                                                // of a song. Shortwave drops the
+                                                // first song, should we?
+
+                                                Log.d(TAG, "requesting recording for ${m.original}")
+                                                recmgr!!.requestNewRecording(m, "audio/mpeg") { r ->
+                                                     handler.post {
+                                                         Log.d(TAG, "new track: ${r.uuid}")
+                                                         streamrec!!.onNewTrack(r)
+                                                     }
+                                                }
                                             }
 
-                                            frm.buf.limit(frm.buf.position())
-                                            frm.buf.rewind()
+                                            frm.buf.flip()
+
+                                            streamrec!!.onFrame(frm.buf.slice())
 
                                             bqueue.add(frm)
                                             current_frame = null
@@ -527,7 +580,8 @@ class PlayerService : Service() {
                                         return
                                     }
                                     Log.d(TAG, "new metadata: ${s2}")
-                                    current_meta = s2
+                                    val m = parseTrackTitle(s2)
+                                    current_meta = m
                                 }
                             }
                         )
@@ -539,16 +593,56 @@ class PlayerService : Service() {
                     if (tostop) {
                         r.abort(TerminationMarker())
                     } else {
-                        decoder!!.step(buf)
+                        decoder?.step(buf)
                     }
                 }
         }
 
-        private fun startPlayingUrl(url: String) {
+        private fun setupStreamRecorder() {
+            val srec = StreamRecorder(
+                handler,
+                object : StreamRecorder.Callback {
+                    override fun onOpenChannel(r: Recording): AsynchronousFileChannel {
+                        val fn = recmgr!!.recordingPath(r)
+                        return AsynchronousFileChannel.open(
+                            fn,
+                            StandardOpenOption.WRITE,
+                            StandardOpenOption.CREATE
+                        )
+                    }
+
+                    override fun onTrackDone(r: Recording, chan: AsynchronousFileChannel,
+                                             interrupted: Boolean) {
+                        Log.d(TAG, "track ${r.uuid} done")
+                        chan.close()
+                        if (!interrupted) {
+                            recmgr!!.notifyRecordingFinished(r)
+                        }
+                    }
+
+                    override fun onStop() {
+                        // TODO: not called
+                        Log.i(TAG, "StreamRecorder stopped")
+                    }
+                }
+            )
+            streamrec?.onStop()
+            streamrec = srec
+        }
+
+        private fun startPlayingUrl(s: Station) {
+            cb.onPlaybackStateChanged(PlaybackState.LOADING)
             reset()
+            cb.onStationLoading(s)
+            lastStation = s
+
+            val url = s.streamUrl
             Log.d(TAG, "Playing URL: $url")
+
             val req = hc.newRequest(url)
             setupRequest(req)
+            setupStreamRecorder()
+
             req.send { r ->
                 handler.post {
                     if (r.getRequestFailure() == null
@@ -571,8 +665,6 @@ class PlayerService : Service() {
                             cb.onError(e)
                         }
                     }
-
-                    looper.quitSafely()
                 }
             }
         }
@@ -580,8 +672,12 @@ class PlayerService : Service() {
         fun handleMessage(msg: Message): Boolean {
             return when (msg.what) {
                 CMD_START_PLAYING_STATION -> {
-                    val url = msg.obj as String
-                    startPlayingUrl(url)
+                    val s = msg.obj as Station
+                    if (recmgr == null) {
+                        wantStart = s
+                    } else {
+                        startPlayingUrl(s)
+                    }
                     true
                 }
                 CMD_PAUSE_PLAYBACK -> {
@@ -596,7 +692,7 @@ class PlayerService : Service() {
                     true
                 }
                 CMD_STOP_PLAYBACK -> {
-                    looper.quitSafely()
+                    reset()
                     true
                 }
                 CMD_DEBUG_INFO -> {
@@ -605,6 +701,17 @@ class PlayerService : Service() {
                     Log.d(TAG, "dropped buffers  : ${stat_dropped_buffers}")
                     Log.d(TAG, "queue limits     : ${max_frames_soft} soft / ${max_frames} hard")
                     Log.d(TAG, "buffer too small : ${stat_small_buffer}")
+                    streamrec!!.debugInfo()
+                    true
+                }
+                CMD_SET_RECMSG_SERVICE -> {
+                    Log.d(TAG, "received recmgr")
+                    recmgr = msg.obj as RecordingManagerService
+
+                    wantStart?.let {
+                        startPlayingUrl(it)
+                    }
+                    wantStart = null
                     true
                 }
                 else -> false
@@ -615,7 +722,6 @@ class PlayerService : Service() {
             hc = HttpClient()
             hc.setIdleTimeout(IDLE_TIMEOUT)
             hc.start()
-            cb.onPlaybackStateChanged(PlaybackState.LOADING)
             try {
                 super.run()
             } catch (e: Exception) {
@@ -629,7 +735,6 @@ class PlayerService : Service() {
             freelist.clear()
 
             hc.stop()
-            cb.onPlaybackStateChanged(PlaybackState.STOPPED)
             Log.d(TAG, "Stopping PlayerThread")
         }
 
@@ -639,10 +744,8 @@ class PlayerService : Service() {
     }
 
     fun startPlayingStation(s: Station) {
-        mHandler.obtainMessage(
-            CMD_START_PLAYING_STATION,
-            s.streamUrl,
-        ).sendToTarget()
+        mHandler.obtainMessage(CMD_START_PLAYING_STATION, s)
+            .sendToTarget()
     }
 
     fun stopPlayback() {
@@ -665,13 +768,37 @@ class PlayerService : Service() {
             .sendToTarget()
     }
 
-    private fun onPlaybackStateChanged(ps: PlaybackState) {
-        Log.d(TAG, "playback state: $ps")
-        mPlaybackState.postValue(ps)
+    private fun onMetaData(m: TrackMetaData) {
+        mMetaData.postValue(m)
         // TODO: update notification
-        if (ps == PlaybackState.STOPPED) {
-            stopSelf()
+        // TODO: update playback history
+    }
+
+    private fun onPlaybackStateChanged(ps: PlaybackState) {
+        val old = mPlaybackState.getValue()
+        mPlaybackState.postValue(ps)
+
+        Log.d(TAG, "playback state: $old -> $ps")
+
+        // TODO: update notification
+
+        val oldfg = old != PlaybackState.STOPPED
+        val newfg = ps != PlaybackState.STOPPED
+
+        when {
+             oldfg && !newfg -> {
+                 stopForeground(Service.STOP_FOREGROUND_REMOVE)
+             }
+             !oldfg && newfg -> {
+                 // TODO: do this while *requesting* a new playing state?
+                 val notif = makeNotification()
+                 startForeground(NOTIF_ID, notif)
+             }
         }
+    }
+
+    private fun onStationLoading(s: Station?) {
+        mStation.postValue(s)
     }
 
     inner class PlayerServiceBinder : Binder() {
@@ -718,13 +845,15 @@ class PlayerService : Service() {
             resources.getString(R.string.user_agent), sid,
             object : PlayerThread.Callback {
                 override fun onMetaData(m: TrackMetaData) {
-                    mMetaData.postValue(m)
-                    // TODO: update notification
-                    // TODO: update playback history
+                    this@PlayerService.onMetaData(m)
                 }
 
                 override fun onPlaybackStateChanged(ps: PlaybackState) {
                     this@PlayerService.onPlaybackStateChanged(ps)
+                }
+
+                override fun onStationLoading(s: Station?) {
+                    this@PlayerService.onStationLoading(s)
                 }
 
                 override fun onError(e: Throwable) {
@@ -739,16 +868,22 @@ class PlayerService : Service() {
         mThread.start()
         mHandler = Handler(mThread.looper, mThread::handleMessage)
 
-        val notif = makeNotification()
-        startForeground(NOTIF_ID, notif)
+        bindService(
+            Intent(this, RecordingManagerService::class.java),
+            mRecMgrConn,
+            Context.BIND_AUTO_CREATE
+        )
+
     }
 
     override fun onDestroy() {
+        mThread.looper.quitSafely()
         mThread.join(1000)       // wait 1sec
         if (mThread.isAlive()) {
             Log.w(TAG, "failed to join thread")
             mThread.interrupt()
             mThread.join()
         }
+        unbindService(mRecMgrConn)
     }
 }

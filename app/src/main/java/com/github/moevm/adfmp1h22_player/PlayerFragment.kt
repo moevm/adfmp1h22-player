@@ -75,6 +75,8 @@ class PlayerFragment : Fragment(R.layout.fragment_player) {
         playbackModel.station.observe(viewLifecycleOwner) { station ->
             if (station != null) {
                 setStrings(station.name, null)
+            } else {
+                setStrings("", null)
             }
         }
         playbackModel.metadata.observe(viewLifecycleOwner) { m ->

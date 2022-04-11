@@ -13,15 +13,22 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.RadioPlayer">
+        android:theme="@style/Theme.RadioPlayer"
+        android:usesCleartextTraffic="true">
+
+        <service
+            android:name=".Service1"
+            android:enabled="true"
+            android:exported="false" />
+
         <activity
             android:name=".HistoryActivity"
             android:exported="false"
-            android:label="@string/history_activity_name"/>
+            android:label="@string/history_activity_name" />
         <activity
             android:name=".AddStationActivity"
             android:exported="false"
-            android:label="@string/add_station_activity_name"/>
+            android:label="@string/add_station_activity_name" />
         <activity
             android:name=".StationInfoActivity"
             android:exported="false"
@@ -45,6 +52,9 @@
         </activity>
         <service
             android:name=".PlayerService"
+            android:exported="false" />
+        <service
+            android:name=".RecordingManagerService"
             android:exported="false" />
     </application>
 

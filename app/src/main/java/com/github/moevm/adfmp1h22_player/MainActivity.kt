@@ -1,5 +1,7 @@
 package com.github.moevm.adfmp1h22_player
 
+import java.util.LinkedList
+
 import androidx.activity.viewModels
 
 import android.util.Log
@@ -12,6 +14,7 @@ import android.content.Intent
 import androidx.fragment.app.Fragment
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
+import com.github.moevm.adfmp1h22_player.SQLite.SQLHelper
 import kotlinx.android.synthetic.main.activity_main.*
 
 import android.content.ServiceConnection
@@ -23,14 +26,13 @@ class MainActivity : AppCompatActivity() {
 
     private var current_station: Station? = null
 
-    // TODO: fun setPlaybackState (pause/resume, stop)
-    // TODO: fun startPlayingStation (Station)
-
     private val playbackModel: PlaybackModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        startService(Intent(applicationContext, Service1::class.java))
 
         pager.adapter = object : FragmentStateAdapter(this) {
             override fun getItemCount(): Int = 2
@@ -73,17 +75,30 @@ class MainActivity : AppCompatActivity() {
 
         Log.d("LIFECYCLE", "creating main activity with $savedInstanceState")
         pager.setCurrentItem(savedInstanceState?.getInt("page") ?: 1, false)
-    }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        doUnbind()
+        playbackModel.station.observe(this) { s ->
+            Log.d("APPDEBUG", "main activity station $s")
+            if (s == null) {
+                pager.setCurrentItem(1)
+            } else {
+                pager.setCurrentItem(0)
+            }
+        }
+
+        val i = Intent(this, PlayerService::class.java)
+        startService(i)
+        bindService(i, mServiceConnection, 0)
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         Log.d("LIFECYCLE", "saving main activity")
         outState.putInt("page", pager.currentItem)
+    }
+
+    override fun onDestroy() {
+        doUnbind()
+        super.onDestroy()
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -102,21 +117,19 @@ class MainActivity : AppCompatActivity() {
                 true
             }
             R.id.debug_info -> {
-                mServiceBinder?.let {
-                    it.service.logDebugInfo()
-                }
+                withPlayerService { it.logDebugInfo() }
                 true
             }
             else -> super.onOptionsItemSelected(item)
         }
     }
 
-    private var mServiceConnection: PlayerServiceConnection? = null
-    private var mServiceBinder: PlayerService.PlayerServiceBinder? = null
+    private val mServiceConnection = PlayerServiceConnection()
 
-    inner class PlayerServiceConnection(
-        private val action: (PlayerService) -> Unit
-    ) : ServiceConnection {
+    inner class PlayerServiceConnection : ServiceConnection {
+        private var mServiceBinder: PlayerService.PlayerServiceBinder? = null
+        private val mCallbackQueue = LinkedList<(PlayerService) -> Unit>()
+
         override fun onServiceConnected(n: ComponentName, sb: IBinder) {
             mServiceBinder = sb as PlayerService.PlayerServiceBinder
             sb.service.mMetaData.observe(this@MainActivity) { m ->
@@ -124,56 +137,48 @@ class MainActivity : AppCompatActivity() {
             }
             sb.service.mPlaybackState.observe(this@MainActivity) { stt ->
                 playbackModel.state.setValue(stt)
-                if (stt == PlaybackState.STOPPED) {
-                    setPlayingStation(null)
-                }
             }
-            action(sb.service)
+            sb.service.mStation.observe(this@MainActivity) { s ->
+                playbackModel.station.setValue(s)
+            }
+            while (!mCallbackQueue.isEmpty()) {
+                val cb = mCallbackQueue.remove()
+                cb(sb.service)
+            }
         }
 
         override fun onServiceDisconnected(n: ComponentName) {
             mServiceBinder = null;
         }
+
+        fun doAction(cb: (PlayerService) -> Unit) {
+            val b = mServiceBinder
+            if (b != null) {
+                cb(b.service)
+            } else {
+                mCallbackQueue.add(cb)
+            }
+        }
     }
 
     private fun withPlayerService(action: (PlayerService) -> Unit) {
-        val b = mServiceBinder
-        if (b == null) {
-            val i = Intent(this, PlayerService::class.java)
-            startForegroundService(i)
-
-            val c = PlayerServiceConnection(action)
-            mServiceConnection = c
-            bindService(i, c, 0)
-        } else {
-            action(b.service)
-        }
+        mServiceConnection.doAction(action)
     }
 
     private fun doUnbind() {
-        mServiceConnection?.let {
-            unbindService(it)
-            mServiceConnection = null
-            mServiceBinder = null
-        }
+        unbindService(mServiceConnection)
     }
 
     fun setPlayingStation(s: Station?) {
         if (s == playbackModel.station.value) {
+            pager.setCurrentItem(0)
             return
         }
 
-        playbackModel.station.setValue(s)
         if (s != null) {
-
             withPlayerService {
                 it.startPlayingStation(s)
             }
-
-            pager.setCurrentItem(0)
-
-        } else {
-            pager.setCurrentItem(1)
         }
     }
 }

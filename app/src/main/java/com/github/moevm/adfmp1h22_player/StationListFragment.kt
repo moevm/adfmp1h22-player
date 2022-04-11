@@ -26,6 +26,11 @@ import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.snackbar.Snackbar
 
 import kotlinx.android.synthetic.main.fragment_station_list.*
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
 
 // Throws IOException
 fun readStationList(r: JsonReader): List<Station> {
@@ -66,13 +71,51 @@ fun readStationList(r: JsonReader): List<Station> {
 class StationListFragment : Fragment(R.layout.fragment_station_list) {
 
     var onSetStation: ((Station) -> Unit)? = null
-
     var action_mode: ActionMode? = null
     lateinit var tracker: SelectionTracker<String>
 
+//    var stationList = ArrayList<Station>()
+//    fun updateAddedList(){
+//
+//        val apiInterface = APIClient().getClient()?.create(APIInterface::class.java)
+//
+//        GlobalScope.launch {
+//            val call: Call<AddStationList?>? = apiInterface!!.AddStationListResources()
+//            Log.d("TAG", call?.request()?.headers.toString())
+//            call?.enqueue(object  : Callback<AddStationList?> {
+//                override fun onResponse(
+//                    call: Call<AddStationList?>,
+//                    response: Response<AddStationList?>
+//                ) {
+//                    Log.d("TAG", response.code().toString())
+//                    val resource: AddStationList? = response.body()
+//                    if(resource != null){
+//                        var progress = resource.size - 1
+//                        for (i in 0..progress) {
+//                            val station = Station(resource[i].changeuuid.toString(), resource[i].name.toString(), resource[i].favicon.toString())
+//                            stationList.add(i, station)
+//                        }
+//                    }
+//                    else{
+//                        Log.d("TAG", "Error in StationListFragmrnt.kt")
+//                    }
+//
+//                }
+//
+//                override fun onFailure(call: Call<AddStationList?>, t: Throwable) {
+//                    call.cancel()
+//                }
+//
+//            })
+//        }
+//    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+//        updateAddedList()
         add_fab.setOnClickListener {
-            startActivity(Intent(context, AddStationActivity::class.java))
+            val intent = Intent(context, AddStationActivity::class.java)
+//            intent.putParcelableArrayListExtra("stationList", stationList)
+            startActivity(intent)
         }
 
         val a = StationListAdapter { s: Station ->
@@ -159,8 +202,8 @@ class StationListFragment : Fragment(R.layout.fragment_station_list) {
 
         val l = mutableListOf(
             Station("static:0", "Ultra (MP3 192)", "http://nashe1.hostingradio.ru/ultra-192.mp3", "https://radioultra.ru/favicons/apple-touch-icon.png"),
-            Station("static:1", "192.168.0.98:8000/stream.mp3", "http://192.168.0.98:8000/stream.mp3", ""),
-            Station("static:2", "192.168.0.98:5000/", "http://192.168.0.98:5000/", ""),
+            Station("static:1", "192.168.0.95:8000/stream.mp3", "http://192.168.0.95:8000/stream.mp3", ""),
+            Station("static:2", "192.168.0.95:5000/", "http://192.168.0.95:5000/", ""),
         )
         if (! try {
                 val json = requireContext().getAssets().open("stations.json")
