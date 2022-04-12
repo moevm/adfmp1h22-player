@@ -245,8 +245,6 @@ class RecordingManagerService : Service() {
                           null, encodeRecording(r))
             }
 
-            Files.createDirectories(recordingsDir())
-
             cb(r)
         }
 
@@ -368,6 +366,11 @@ class RecordingManagerService : Service() {
 
         override protected fun onLooperPrepared() {
             mHandler = Handler(looper)
+
+            mHandler.post {
+                Files.createDirectories(recordingsDir())
+                handleCmdFetchRecordings()
+            }
         }
 
     }
@@ -472,9 +475,6 @@ class RecordingManagerService : Service() {
         )
         mThread.start()
         mHandler = Handler(mThread.looper, mThread::handleMessage)
-
-        mHandler.obtainMessage(CMD_FETCH_RECORDINGS)
-            .sendToTarget()
     }
 
     override fun onDestroy() {
