@@ -180,6 +180,7 @@ class PlayerService : Service() {
         private var stat_allocated_buffers: Int = 0
         private var stat_dropped_buffers: Int = 0
         private var stat_small_buffer: Int = 0
+        private var stat_drained: Int = 0
 
         fun reset() {
             if (lastStation != null) {
@@ -344,7 +345,7 @@ class PlayerService : Service() {
                                     }
                                 } else {
                                     if (bqueue.isEmpty() && !freelist.isEmpty()) {
-                                        Log.w(TAG, "drained bqueue")
+                                        stat_drained++
                                     }
                                 }
 
@@ -699,6 +700,7 @@ class PlayerService : Service() {
                     Log.d(TAG, "sizes: bqueue:${bqueue.size} freelist:${freelist.size}")
                     Log.d(TAG, "allocated buffers: ${stat_allocated_buffers}")
                     Log.d(TAG, "dropped buffers  : ${stat_dropped_buffers}")
+                    Log.d(TAG, "drained events   : ${stat_drained}")
                     Log.d(TAG, "queue limits     : ${max_frames_soft} soft / ${max_frames} hard")
                     Log.d(TAG, "buffer too small : ${stat_small_buffer}")
                     streamrec!!.debugInfo()
