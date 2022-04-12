@@ -162,6 +162,10 @@ class MainActivity : AppCompatActivity() {
                 cb(b.service)
             } else {
                 mCallbackQueue.add(cb)
+
+                val i = Intent(this@MainActivity, PlayerService::class.java)
+                startService(i)
+                bindService(i, this, 0)
             }
         }
     }
