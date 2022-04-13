@@ -206,9 +206,15 @@ class StationListFragment : Fragment(R.layout.fragment_station_list) {
         a.tracker = tracker
 
         val l = mutableListOf(
+//<<<<<<< HEAD
             Station("static:0", "Ultra (MP3 192)", "http://nashe1.hostingradio.ru/ultra-192.mp3", "https://radioultra.ru/favicons/apple-touch-icon.png", ""),
             Station("static:1", "192.168.0.98:8000/stream.mp3", "http://192.168.0.98:8000/stream.mp3", "", ""),
             Station("static:2", "192.168.0.98:5000/", "http://192.168.0.98:5000/", "", ""),
+//=======
+//            Station("static:0", "Ultra (MP3 192)", "http://nashe1.hostingradio.ru/ultra-192.mp3", "https://radioultra.ru/favicons/apple-touch-icon.png"),
+//            Station("static:1", "192.168.0.95:8000/stream.mp3", "http://192.168.0.95:8000/stream.mp3", ""),
+//            Station("static:2", "192.168.0.95:5000/", "http://192.168.0.95:5000/", ""),
+//>>>>>>> main
         )
         if (! try {
                 val json = requireContext().getAssets().open("stations.json")
