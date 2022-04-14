@@ -37,44 +37,44 @@ import retrofit2.Callback
 import retrofit2.Response
 
 // Throws IOException
-fun readStationList(r: JsonReader): List<Station> {
-    r.beginArray()
-    val l = mutableListOf<Station>()
-    while (r.hasNext()) {
-        r.beginObject()
-        var changeUuid: String? = null
-        var stationuuid : String? = null
-        var name: String? = null
-        var streamUrl: String? = null
-        var faviconUrl: String? = null
-        while (r.hasNext()) {
-            when (r.nextName()) {
-                "changeuuid" -> changeUuid = r.nextString()
-                "stationuuid" -> stationuuid = r.nextString()
-                "name" -> name = r.nextString()
-                "url" -> streamUrl = r.nextString()
-                "favicon" -> faviconUrl = r.nextString()
-                else -> r.skipValue()
-            }
-        }
-        r.endObject()
-        if (changeUuid != null
-            && stationuuid != null
-            && name != null
-            && streamUrl != null
-            && faviconUrl != null) {
-            l.add(Station(
-                      changeUuid,
-                      stationuuid,
-                      name,
-                      streamUrl,
-                      faviconUrl,
-            ))
-        }
-    }
-    r.endArray()
-    return l
-}
+//fun readStationList(r: JsonReader): List<Station> {
+//    r.beginArray()
+//    val l = mutableListOf<Station>()
+//    while (r.hasNext()) {
+//        r.beginObject()
+//        var changeUuid: String? = null
+//        var stationuuid : String? = null
+//        var name: String? = null
+//        var streamUrl: String? = null
+//        var faviconUrl: String? = null
+//        while (r.hasNext()) {
+//            when (r.nextName()) {
+//                "changeuuid" -> changeUuid = r.nextString()
+//                "stationuuid" -> stationuuid = r.nextString()
+//                "name" -> name = r.nextString()
+//                "url" -> streamUrl = r.nextString()
+//                "favicon" -> faviconUrl = r.nextString()
+//                else -> r.skipValue()
+//            }
+//        }
+//        r.endObject()
+//        if (changeUuid != null
+//            && stationuuid != null
+//            && name != null
+//            && streamUrl != null
+//            && faviconUrl != null) {
+//            l.add(Station(
+//                      changeUuid,
+//                      stationuuid,
+//                      name,
+//                      streamUrl,
+//                      faviconUrl,
+//            ))
+//        }
+//    }
+//    r.endArray()
+//    return l
+//}
 
 class StationListFragment : Fragment(R.layout.fragment_station_list) {
 
@@ -84,42 +84,8 @@ class StationListFragment : Fragment(R.layout.fragment_station_list) {
     val a = StationListAdapter { s: Station ->
         onSetStation?.let { it(s) }
     }
+    var db : SQLHelper? = null
 
-//    var stationList = ArrayList<Station>()
-//    fun updateAddedList(){
-//
-//        val apiInterface = APIClient().getClient()?.create(APIInterface::class.java)
-//
-//        GlobalScope.launch {
-//            val call: Call<AddStationList?>? = apiInterface!!.AddStationListResources()
-//            Log.d("TAG", call?.request()?.headers.toString())
-//            call?.enqueue(object  : Callback<AddStationList?> {
-//                override fun onResponse(
-//                    call: Call<AddStationList?>,
-//                    response: Response<AddStationList?>
-//                ) {
-//                    Log.d("TAG", response.code().toString())
-//                    val resource: AddStationList? = response.body()
-//                    if(resource != null){
-//                        var progress = resource.size - 1
-//                        for (i in 0..progress) {
-//                            val station = Station(resource[i].changeuuid.toString(), resource[i].name.toString(), resource[i].favicon.toString())
-//                            stationList.add(i, station)
-//                        }
-//                    }
-//                    else{
-//                        Log.d("TAG", "Error in StationListFragmrnt.kt")
-//                    }
-//
-//                }
-//
-//                override fun onFailure(call: Call<AddStationList?>, t: Throwable) {
-//                    call.cancel()
-//                }
-//
-//            })
-//        }
-//    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
 
@@ -130,12 +96,8 @@ class StationListFragment : Fragment(R.layout.fragment_station_list) {
             startActivity(intent)
         }
 
-        var db : SQLHelper? = null
-        db = context?.let { SQLHelper(it) }
-        val manager = SQLiteAddedStationsManager(db!!)
-
         station_list.adapter = a
-
+        //// В строке 105 было changeuuid
         tracker = SelectionTracker.Builder<String>(
             "station-list-selection",
             station_list,
@@ -212,14 +174,15 @@ class StationListFragment : Fragment(R.layout.fragment_station_list) {
         })
         a.tracker = tracker
 
+        db = context?.let { SQLHelper(it) }
+        val manager = SQLiteAddedStationsManager(db!!)
         val l = manager.getData();
+        Log.d("TAG", l[0].toString())
         a.submitList(l)
     }
 
     override fun onResume() {
         super.onResume()
-        Log.d("TAG", "TUTU!!!!!!!!!!!!!!")
-        var db : SQLHelper? = null
         db = context?.let { SQLHelper(it) }
         val manager = SQLiteAddedStationsManager(db!!)
         val l = manager.getData();

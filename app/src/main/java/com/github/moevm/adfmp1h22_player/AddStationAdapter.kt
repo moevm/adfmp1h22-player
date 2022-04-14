@@ -40,6 +40,13 @@ class AddStationAdapter(private val stations: List<Station>, private val selecte
 //        Log.d("TAG", selectedStations.indexOf(station).toString())
 //        Log.d("TAG", selectedStations.toString())
 //        Log.d("TAG", station.toString())
+        if(station.codec != "MP3" || station.streamUrl.split(":")[0] == "https"){
+            holder.itemView.isEnabled = false
+            holder.button.setClickable(false)
+            holder.button.setEnabled(false)
+            holder.button.visibility = android.view.View.INVISIBLE
+            holder.trName.setTextColor(Color.RED)
+        }
         if(selectedStations.indexOf(station) != -1){
             holder.itemView.isEnabled = false
             holder.button.setClickable(false)

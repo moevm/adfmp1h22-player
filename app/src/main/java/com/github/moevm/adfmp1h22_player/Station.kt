@@ -8,4 +8,5 @@ data class Station(val changeuuid: String,
                    val stationuuid : String,
                    val name: String,
                    val streamUrl: String,
+                   val codec: String,
                    val faviconUrl: String) : Parcelable

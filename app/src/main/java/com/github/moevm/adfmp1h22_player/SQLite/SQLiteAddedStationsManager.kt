@@ -21,6 +21,7 @@ class SQLiteAddedStationsManager(
                 SQLiteContract.AddedStationsTable.COLUMN_NAME to item.name,
                 SQLiteContract.AddedStationsTable.COLUMN_STREAMURL to item.streamUrl,
                 SQLiteContract.AddedStationsTable.COLUMN_FAVICON to item.faviconUrl,
+                SQLiteContract.AddedStationsTable.COLUMN_CODEC to item.codec,
                 SQLiteContract.AddedStationsTable.COLUMN_FAVICON_DATE to System.currentTimeMillis().toInt()
             ),
             SQLiteDatabase.CONFLICT_REPLACE
@@ -39,6 +40,7 @@ class SQLiteAddedStationsManager(
             stationuuid = c.getString(c.getColumnIndexOrThrow(SQLiteContract.AddedStationsTable.COLUMN_STATIONUUID)),
             name = c.getString(c.getColumnIndexOrThrow(SQLiteContract.AddedStationsTable.COLUMN_NAME)).trimStart(),
             streamUrl = c.getString(c.getColumnIndexOrThrow(SQLiteContract.AddedStationsTable.COLUMN_STREAM_URL)),
+            codec = c.getString(c.getColumnIndexOrThrow(SQLiteContract.AddedStationsTable.COLUMN_CODEC)),
             faviconUrl = c.getString(c.getColumnIndexOrThrow(SQLiteContract.AddedStationsTable.COLUMN_FAVICON)),
         )
     }

@@ -29,11 +29,24 @@ class AddStationActivity : AppCompatActivity() {
                     val manager = SQLiteAllStationsManager(db!!)
                     val managerAdd = SQLiteAddedStationsManager(db!!)
                     val stationList = manager.getData()
+                    val st :MutableList<Station> = mutableListOf()
+                    for(station in stationList){
+                        if(station.codec != "MP3" || station.streamUrl.split(":")[0] == "https"){
+                            if(st.size > 0) {
+                                st.add(st.size - 1, station)
+                            }else{
+                                st.add(0, station)
+                            }
+                        }else{
+                            st.add(0, station)
+                        }
+                    }
+                    Log.d("TAG", "ST SIZE = ${st.size}")
                     val selectedStations = managerAdd.getData()
                     Log.d("TAG", selectedStations.toString())
                     val layoutManager = LinearLayoutManager(applicationContext)
                     stationToAddList.layoutManager = layoutManager
-                    stationToAddList.adapter = AddStationAdapter(stationList, selectedStations, managerAdd)
+                    stationToAddList.adapter = AddStationAdapter(st, selectedStations, managerAdd)
                 }
                 else{
                     Log.d("TAG","NOT BIND")

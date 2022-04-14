@@ -33,24 +33,6 @@ class StationCatalogueUpdaterService : Service() {
         Log.d("TAG", "fillingAddedList")
         val apiInterface = APIClient().getClient()?.create(APIInterface::class.java)
 
-//        val t : Thread = object  : Thread(){
-//            override fun run(){
-//                val createTable_new = "CREATE TABLE IF NOT EXISTS ${SQLiteContract.AllStationsTable.TABLE_NAME_NEW} (" +
-//                        SQLiteContract.AllStationsTable.COLUMN_ID +
-//                        " INTEGER PRIMARY KEY AUTOINCREMENT," +
-//                        SQLiteContract.AllStationsTable.COLUMN_CHANGEUUID + " TEXT," +
-//                        SQLiteContract.AllStationsTable.COLUMN_STATIONUUID + " TEXT," +
-//                        SQLiteContract.AllStationsTable.COLUMN_NAME + " TEXT," +
-//                        SQLiteContract.AllStationsTable.COLUMN_STREAMURL + " TEXT," +
-//                        SQLiteContract.AllStationsTable.COLUMN_FAVICON + " TEXT," +
-//                        SQLiteContract.AllStationsTable.COLUMN_FAVICON_DATE +
-//                        " INTEGER NOT NULL)"
-//                manager.createTable(createTable_new)
-//                Log.d("TAG","CREATE TABLE NEW")
-//            }
-//        }
-//        t.start()
-
         val stL = ArrayList<Station>()
         GlobalScope.launch{
             if(manager.emptyTable(SQLiteContract.AllStationsTable.TABLE_NAME)){
@@ -73,6 +55,7 @@ class StationCatalogueUpdaterService : Service() {
                                     resource[i].stationuuid.toString(),
                                     resource[i].name.toString(),
                                     resource[i].url.toString(),
+                                    resource[i].codec.toString(),
                                     resource[i].favicon.toString(),
                                 )
                                 stL.add(station)
