@@ -9,26 +9,26 @@ class SQLHelper(
     private val context: Context
 ) : SQLiteOpenHelper(context, "RadioPlayerDataBase.db", null, 2) {
     override fun onCreate(db: SQLiteDatabase) {
-
         val createTableAllStations = "CREATE TABLE IF NOT EXISTS ${SQLiteContract.AllStationsTable.TABLE_NAME} (" +
-                SQLiteContract.AllStationsTable.COLUMN_ID +
-                " INTEGER PRIMARY KEY AUTOINCREMENT," +
+//                SQLiteContract.AllStationsTable.COLUMN_ID +
+//                " INTEGER PRIMARY KEY AUTOINCREMENT," +
+                SQLiteContract.AllStationsTable.COLUMN_STATIONUUID + " STRING PRIMARY KEY," +
                 SQLiteContract.AllStationsTable.COLUMN_CHANGEUUID + " TEXT," +
-                SQLiteContract.AllStationsTable.COLUMN_STATIONUUID + " TEXT," +
                 SQLiteContract.AllStationsTable.COLUMN_NAME + " TEXT," +
-                SQLiteContract.AllStationsTable.COLUMN_STREAMURL + " TEXT," +
+                SQLiteContract.AllStationsTable.COLUMN_STREAM_URL + " TEXT," +
                 SQLiteContract.AllStationsTable.COLUMN_FAVICON + " TEXT," +
                 SQLiteContract.AllStationsTable.COLUMN_FAVICON_DATE +
                 " INTEGER NOT NULL)"
+
         db.execSQL(createTableAllStations)
 
         val createTableAddedStations = "CREATE TABLE IF NOT EXISTS ${SQLiteContract.AddedStationsTable.TABLE_NAME} (" +
-                SQLiteContract.AddedStationsTable.COLUMN_ID +
-                " INTEGER PRIMARY KEY AUTOINCREMENT," +
+//                SQLiteContract.AddedStationsTable.COLUMN_ID +
+//                " INTEGER PRIMARY KEY AUTOINCREMENT," +
+                SQLiteContract.AddedStationsTable.COLUMN_STATIONUUID + " STRING PRIMARY KEY," +
                 SQLiteContract.AddedStationsTable.COLUMN_CHANGEUUID + " TEXT," +
-                SQLiteContract.AddedStationsTable.COLUMN_STATIONUUID + " TEXT," +
                 SQLiteContract.AddedStationsTable.COLUMN_NAME + " TEXT," +
-                SQLiteContract.AddedStationsTable.COLUMN_STREAMURL + " TEXT," +
+                SQLiteContract.AddedStationsTable.COLUMN_STREAM_URL + " TEXT," +
                 SQLiteContract.AddedStationsTable.COLUMN_FAVICON + " TEXT," +
                 SQLiteContract.AddedStationsTable.COLUMN_FAVICON_DATE +
                 " INTEGER NOT NULL)"

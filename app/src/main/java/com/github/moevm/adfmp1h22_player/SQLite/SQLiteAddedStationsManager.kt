@@ -10,47 +10,36 @@ import com.github.moevm.adfmp1h22_player.Station
 class SQLiteAddedStationsManager(
     private val db : SQLHelper
 ) {
-    fun insertRows(list: List<Station>){
+    fun insertRow(item: Station){
         val db = db.writableDatabase
-        db.beginTransaction()
-        try {
-            for(item in list){
-                db.insertWithOnConflict(
-                    SQLiteContract.AddedStationsTable.TABLE_NAME,
-                    null,
-                    contentValuesOf(
-                        SQLiteContract.AddedStationsTable.COLUMN_CHANGEUUID to item.changeuuid,
-                        SQLiteContract.AddedStationsTable.COLUMN_STATIONUUID to item.stationuuid,
-                        SQLiteContract.AddedStationsTable.COLUMN_NAME to item.name,
-                        SQLiteContract.AddedStationsTable.COLUMN_STREAMURL to item.streamUrl,
-                        SQLiteContract.AddedStationsTable.COLUMN_FAVICON to item.faviconUrl,
-                        SQLiteContract.AddedStationsTable.COLUMN_FAVICON_DATE to System.currentTimeMillis().toInt()
-                    ),
-                    SQLiteDatabase.CONFLICT_REPLACE
-                )
-            }
-            db.setTransactionSuccessful()
-            Log.d("TAG", "Add new row in _NEW table")
-        }catch (e: SQLiteConstraintException){
-            Log.d("TAG", "SQLiteConstraintException if SQLiteAllStationsManagement")
-        }finally {
-            db.endTransaction()
-        }
+        db.insertWithOnConflict(
+            SQLiteContract.AddedStationsTable.TABLE_NAME,
+            null,
+            contentValuesOf(
+                SQLiteContract.AddedStationsTable.COLUMN_CHANGEUUID to item.changeuuid,
+                SQLiteContract.AddedStationsTable.COLUMN_STATIONUUID to item.stationuuid,
+                SQLiteContract.AddedStationsTable.COLUMN_NAME to item.name,
+                SQLiteContract.AddedStationsTable.COLUMN_STREAMURL to item.streamUrl,
+                SQLiteContract.AddedStationsTable.COLUMN_FAVICON to item.faviconUrl,
+                SQLiteContract.AddedStationsTable.COLUMN_FAVICON_DATE to System.currentTimeMillis().toInt()
+            ),
+            SQLiteDatabase.CONFLICT_REPLACE
+        )
+        Log.d("TAG", "Add new row in Added(main) table")
     }
+
+    fun deleteRow(item : Station){
+        val db = db.writableDatabase
+        db.execSQL("DELETE FROM "+SQLiteContract.AddedStationsTable.TABLE_NAME+" WHERE ${SQLiteContract.AddedStationsTable.COLUMN_STATIONUUID} = ${item.stationuuid}");
+    }
+
     fun parseStation(c:Cursor) : Station{
         return Station(
-<<<<<<< HEAD
             changeuuid = c.getString(c.getColumnIndexOrThrow(SQLiteContract.AddedStationsTable.COLUMN_CHANGEUUID)),
-            stationuuid = c.getString(c.getColumnIndexOrThrow(SQLiteContract.AllStationsTable.COLUMN_STATIONUUID)),
-            name = c.getString(c.getColumnIndexOrThrow(SQLiteContract.AddedStationsTable.COLUMN_NAME)),
-            streamUrl = c.getString(c.getColumnIndexOrThrow(SQLiteContract.AddedStationsTable.COLUMN_STREAMURL)),
+            stationuuid = c.getString(c.getColumnIndexOrThrow(SQLiteContract.AddedStationsTable.COLUMN_STATIONUUID)),
+            name = c.getString(c.getColumnIndexOrThrow(SQLiteContract.AddedStationsTable.COLUMN_NAME)).trimStart(),
+            streamUrl = c.getString(c.getColumnIndexOrThrow(SQLiteContract.AddedStationsTable.COLUMN_STREAM_URL)),
             faviconUrl = c.getString(c.getColumnIndexOrThrow(SQLiteContract.AddedStationsTable.COLUMN_FAVICON)),
-=======
-            changeuuid = c.getString(c.getColumnIndexOrThrow(SQLiteContract.AllStationsTable.COLUMN_CHANGEUUID)),
-            name = c.getString(c.getColumnIndexOrThrow(SQLiteContract.AllStationsTable.COLUMN_NAME)),
-            streamUrl = c.getString(c.getColumnIndexOrThrow(SQLiteContract.AllStationsTable.COLUMN_STREAM_URL)),
-            faviconUrl = c.getString(c.getColumnIndexOrThrow(SQLiteContract.AllStationsTable.COLUMN_FAVICON))
->>>>>>> main
         )
     }
     fun getData(): MutableList<Station> {

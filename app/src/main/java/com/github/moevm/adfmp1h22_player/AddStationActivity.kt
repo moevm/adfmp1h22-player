@@ -9,6 +9,7 @@ import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.github.moevm.adfmp1h22_player.SQLite.SQLiteAddedStationsManager
 import com.github.moevm.adfmp1h22_player.SQLite.SQLiteAllStationsManager
 import kotlinx.android.synthetic.main.activity_add_station.*
 
@@ -26,10 +27,13 @@ class AddStationActivity : AppCompatActivity() {
                 if(sBound){
                     val db = stationCatalogueUpdaterService?.db
                     val manager = SQLiteAllStationsManager(db!!)
+                    val managerAdd = SQLiteAddedStationsManager(db!!)
                     val stationList = manager.getData()
+                    val selectedStations = managerAdd.getData()
+                    Log.d("TAG", selectedStations.toString())
                     val layoutManager = LinearLayoutManager(applicationContext)
                     stationToAddList.layoutManager = layoutManager
-                    stationToAddList.adapter = AddStationAdapter(stationList)
+                    stationToAddList.adapter = AddStationAdapter(stationList, selectedStations, managerAdd)
                 }
                 else{
                     Log.d("TAG","NOT BIND")

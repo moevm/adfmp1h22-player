@@ -22,6 +22,9 @@ import androidx.recyclerview.selection.ItemKeyProvider
 import androidx.recyclerview.selection.ItemDetailsLookup
 import androidx.recyclerview.selection.StorageStrategy
 import androidx.viewpager2.widget.ViewPager2
+import com.github.moevm.adfmp1h22_player.SQLite.SQLHelper
+import com.github.moevm.adfmp1h22_player.SQLite.SQLiteAddedStationsManager
+import com.github.moevm.adfmp1h22_player.SQLite.SQLiteAllStationsManager
 import com.github.moevm.adfmp1h22_player.SQLite.SQLiteContract
 
 import com.google.android.material.snackbar.Snackbar
@@ -78,6 +81,9 @@ class StationListFragment : Fragment(R.layout.fragment_station_list) {
     var onSetStation: ((Station) -> Unit)? = null
     var action_mode: ActionMode? = null
     lateinit var tracker: SelectionTracker<String>
+    val a = StationListAdapter { s: Station ->
+        onSetStation?.let { it(s) }
+    }
 
 //    var stationList = ArrayList<Station>()
 //    fun updateAddedList(){
@@ -116,16 +122,17 @@ class StationListFragment : Fragment(R.layout.fragment_station_list) {
 //    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-//        updateAddedList()
+
+        Log.d("TAG", "In onViewCreated !!!!!!!!!!!!")
+
         add_fab.setOnClickListener {
             val intent = Intent(context, AddStationActivity::class.java)
-//            intent.putParcelableArrayListExtra("stationList", stationList)
             startActivity(intent)
         }
 
-        val a = StationListAdapter { s: Station ->
-            onSetStation?.let { it(s) }
-        }
+        var db : SQLHelper? = null
+        db = context?.let { SQLHelper(it) }
+        val manager = SQLiteAddedStationsManager(db!!)
 
         station_list.adapter = a
 
@@ -205,31 +212,18 @@ class StationListFragment : Fragment(R.layout.fragment_station_list) {
         })
         a.tracker = tracker
 
-        val l = mutableListOf(
-//<<<<<<< HEAD
-            Station("static:0", "Ultra (MP3 192)", "http://nashe1.hostingradio.ru/ultra-192.mp3", "https://radioultra.ru/favicons/apple-touch-icon.png", ""),
-            Station("static:1", "192.168.0.98:8000/stream.mp3", "http://192.168.0.98:8000/stream.mp3", "", ""),
-            Station("static:2", "192.168.0.98:5000/", "http://192.168.0.98:5000/", "", ""),
-//=======
-//            Station("static:0", "Ultra (MP3 192)", "http://nashe1.hostingradio.ru/ultra-192.mp3", "https://radioultra.ru/favicons/apple-touch-icon.png"),
-//            Station("static:1", "192.168.0.95:8000/stream.mp3", "http://192.168.0.95:8000/stream.mp3", ""),
-//            Station("static:2", "192.168.0.95:5000/", "http://192.168.0.95:5000/", ""),
-//>>>>>>> main
-        )
-        if (! try {
-                val json = requireContext().getAssets().open("stations.json")
-                l.addAll(readStationList(JsonReader(InputStreamReader(json))))
-                true
-            } catch (e: IOException) {
-                false
-            } catch (e: IllegalStateException) {
-                false
-            }
-        ) {
-            Snackbar.make(view, "Failed to load stations.json",
-                          Snackbar.LENGTH_LONG)
-                .show()
-        }
+        val l = manager.getData();
+        a.submitList(l)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        Log.d("TAG", "TUTU!!!!!!!!!!!!!!")
+        var db : SQLHelper? = null
+        db = context?.let { SQLHelper(it) }
+        val manager = SQLiteAddedStationsManager(db!!)
+        val l = manager.getData();
+        Log.d("TAG", l.size.toString())
         a.submitList(l)
     }
 
