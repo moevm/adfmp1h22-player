@@ -658,8 +658,8 @@ class PlayerService : Service() {
         }
 
         private fun startPlayingUrl(s: Station) {
-            cb.onPlaybackStateChanged(PlaybackState.LOADING)
             reset()
+            cb.onPlaybackStateChanged(PlaybackState.LOADING)
             cb.onStationLoading(s)
             lastStation = s
 
@@ -675,21 +675,27 @@ class PlayerService : Service() {
                     if (r.getRequestFailure() == null
                         && r.getResponseFailure() is TerminationMarker) {
                         Log.i(TAG, "HTTP Response terminated")
+
+                        // No need to call reset() again
+                        return@post
                     } else if (r.isFailed()) {
                         try {
                             Log.w(TAG, "http failed")
                             r.getRequestFailure()?.let {
-                                Log.d(TAG, "req  fail: ${it.toString()}", it)
+                                Log.d(TAG, "req  fail", it)
                                 cb.onError(it)
                             }
                             r.getResponseFailure()?.let {
-                                Log.d(TAG, "resp fail: ${it.toString()}", it)
+                                Log.d(TAG, "resp fail", it)
                                 cb.onError(it)
                             }
                         } catch (e: Exception) {
                             Log.d(TAG, "exception while handling request failure", e)
                             cb.onError(e)
                         }
+                    } else {
+                        // NOTE: probably lost network or station stopped
+                        Log.i(TAG, "http stopped")
                     }
 
                     reset()
