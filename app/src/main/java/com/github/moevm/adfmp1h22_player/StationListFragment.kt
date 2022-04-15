@@ -97,7 +97,6 @@ class StationListFragment : Fragment(R.layout.fragment_station_list) {
         }
 
         station_list.adapter = a
-        //// В строке 105 было changeuuid
         tracker = SelectionTracker.Builder<String>(
             "station-list-selection",
             station_list,
@@ -177,7 +176,6 @@ class StationListFragment : Fragment(R.layout.fragment_station_list) {
         db = context?.let { SQLHelper(it) }
         val manager = SQLiteAddedStationsManager(db!!)
         val l = manager.getData();
-        Log.d("TAG", l[0].toString())
         a.submitList(l)
     }
 
@@ -207,8 +205,32 @@ class StationListFragment : Fragment(R.layout.fragment_station_list) {
                     }
                     R.id.station_list_item_info -> {
                         // TODO: actually pass selection
+                        db = context?.let { SQLHelper(it) }
+                        val manager = SQLiteAddedStationsManager(db!!)
+                        val l = manager.getData();
+//                        val info = mutableMapOf("name" to "", "url" to "", "format" to "")
+                        var info :String = ""
+                        tracker.selection.forEach{
+//                            Log.d("TAG", it.toString())
+                            for(i in l){
+                                if(i.changeuuid == it.toString()){
+                                    Log.d("TAG", i.toString())
+                                    info += i.name
+                                    info += "$"
+                                    info += i.streamUrl
+                                    info += "$"
+                                    info += i.codec
+//                                    info["name"] = i.name
+//                                    info["url"] = i.streamUrl
+//                                    info["format"] = i.codec
+                                }
+                            }
+//                            Log.d("TAG", "\n")
+                        }
                         tracker.clearSelection()
-                        startActivity(Intent(context, StationInfoActivity::class.java))
+                        val intent = Intent(context, StationInfoActivity::class.java)
+                        intent.putExtra("info", info)
+                        startActivity(intent)
                         true
                     }
                     else -> false
@@ -226,3 +248,4 @@ class StationListFragment : Fragment(R.layout.fragment_station_list) {
             }
         }
 }
+

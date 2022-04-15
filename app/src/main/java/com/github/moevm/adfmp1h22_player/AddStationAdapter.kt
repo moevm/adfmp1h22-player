@@ -1,5 +1,6 @@
 package com.github.moevm.adfmp1h22_player
 
+import android.annotation.SuppressLint
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.drawable.Drawable
@@ -21,10 +22,19 @@ import com.github.moevm.adfmp1h22_player.SQLite.SQLiteAllStationsManager
 import com.squareup.picasso.Picasso
 import kotlinx.android.synthetic.main.activity_main.*
 
-class AddStationAdapter(private val stations: List<Station>, private val selectedStations: List<Station>, private val manager: SQLiteAddedStationsManager) :
+class AddStationAdapter(private val st: List<Station>, private val selectedStations: List<Station>, private val manager: SQLiteAddedStationsManager) :
     RecyclerView.Adapter<AddStationAdapter.Holder>(),
     View.OnClickListener
 {
+
+    private var stations = st
+
+    @SuppressLint("NotifyDataSetChanged")
+    fun setStations(newStations: List<Station>){
+        stations = newStations
+        notifyDataSetChanged()
+    }
+
     override fun getItemCount(): Int = stations.size
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): Holder {
@@ -37,14 +47,11 @@ class AddStationAdapter(private val stations: List<Station>, private val selecte
         var station = stations[position]
         holder.trName.text = station.name
         holder.itemView.tag = station
+        holder.itemView.isEnabled = true
 //        Log.d("TAG", selectedStations.indexOf(station).toString())
 //        Log.d("TAG", selectedStations.toString())
 //        Log.d("TAG", station.toString())
         if(station.codec != "MP3" || station.streamUrl.split(":")[0] == "https"){
-            holder.itemView.isEnabled = false
-            holder.button.setClickable(false)
-            holder.button.setEnabled(false)
-            holder.button.visibility = android.view.View.INVISIBLE
             holder.trName.setTextColor(Color.RED)
         }
         if(selectedStations.indexOf(station) != -1){
@@ -75,6 +82,7 @@ class AddStationAdapter(private val stations: List<Station>, private val selecte
             }
             t.start()
         }
+
     }
 
     class Holder(view: View) : RecyclerView.ViewHolder(view) {

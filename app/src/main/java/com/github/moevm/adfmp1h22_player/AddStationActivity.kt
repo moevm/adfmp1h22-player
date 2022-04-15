@@ -4,14 +4,17 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
+import android.widget.SearchView
+import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.github.moevm.adfmp1h22_player.SQLite.SQLiteAddedStationsManager
 import com.github.moevm.adfmp1h22_player.SQLite.SQLiteAllStationsManager
 import kotlinx.android.synthetic.main.activity_add_station.*
+
 
 class AddStationActivity : AppCompatActivity() {
 
@@ -27,26 +30,57 @@ class AddStationActivity : AppCompatActivity() {
                 if(sBound){
                     val db = stationCatalogueUpdaterService?.db
                     val manager = SQLiteAllStationsManager(db!!)
-                    val managerAdd = SQLiteAddedStationsManager(db!!)
+                    val managerAdd = SQLiteAddedStationsManager(db)
                     val stationList = manager.getData()
-                    val st :MutableList<Station> = mutableListOf()
-                    for(station in stationList){
-                        if(station.codec != "MP3" || station.streamUrl.split(":")[0] == "https"){
-                            if(st.size > 0) {
-                                st.add(st.size - 1, station)
-                            }else{
-                                st.add(0, station)
-                            }
-                        }else{
-                            st.add(0, station)
-                        }
-                    }
-                    Log.d("TAG", "ST SIZE = ${st.size}")
                     val selectedStations = managerAdd.getData()
                     Log.d("TAG", selectedStations.toString())
                     val layoutManager = LinearLayoutManager(applicationContext)
                     stationToAddList.layoutManager = layoutManager
-                    stationToAddList.adapter = AddStationAdapter(st, selectedStations, managerAdd)
+                    val adapter = AddStationAdapter(stationList, selectedStations, managerAdd)
+                    stationToAddList.adapter = adapter
+
+                    searchStation.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+                        override fun onQueryTextSubmit(query: String?): Boolean {
+                            Log.d("TAG", "in SEARCH")
+                            if(query != null){
+                                Log.d("TAG", "in NOT NULL QUERY")
+                                val newStations :MutableList<Station> = mutableListOf()
+                                for(st in stationList){
+                                    if(st.name.contains(query)){
+                                        newStations.add(st)
+                                    }
+                                }
+                                Log.d("TAG", newStations.toString())
+                                Log.d("TAG", newStations.size.toString())
+                                if (newStations.size > 0) {
+                                    adapter.setStations(newStations)
+                                } else {
+                                    Toast.makeText(this@AddStationActivity, "No Match found", Toast.LENGTH_LONG).show()
+                                }
+                                return false
+                            }else{
+                                return false
+                            }
+                        }
+
+                        override fun onQueryTextChange(newText: String?): Boolean {
+                            ///
+                            if(newText != null){
+                                val newStations :MutableList<Station> = mutableListOf()
+                                for(st in stationList){
+                                    if(st.name.contains(newText)){
+                                        newStations.add(st)
+                                    }
+                                }
+                                if (newStations.size > 0) {
+                                    adapter.setStations(newStations)
+                                }
+                                return false
+                            }
+                            ///
+                            return false
+                        }
+                    })
                 }
                 else{
                     Log.d("TAG","NOT BIND")

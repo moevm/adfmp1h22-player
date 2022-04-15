@@ -6,22 +6,19 @@
     android:layout_height="match_parent"
     tools:context=".AddStationActivity">
 
-    <EditText
-        android:id="@+id/editTextTextPersonName"
+    <SearchView
+        android:id="@+id/searchStation"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="20dp"
         android:layout_marginTop="46dp"
         android:layout_marginEnd="20dp"
-        android:drawableStart="@android:drawable/ic_menu_search"
-        android:ems="10"
-        android:hint="@string/station_name"
-        android:inputType="textPersonName"
-        android:textColorHint="#757575"
+        android:queryHint="@string/station_name"
+        android:iconifiedByDefault="false"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        android:autofillHints="" />
+        />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/stationToAddList"
@@ -32,7 +29,7 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/editTextTextPersonName"
+        app:layout_constraintTop_toBottomOf="@+id/searchStation"
         />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
