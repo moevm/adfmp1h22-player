@@ -6,11 +6,13 @@ import java.nio.file.StandardOpenOption
 import android.content.ComponentName
 import android.content.ServiceConnection
 
-import org.eclipse.jetty.util.Promise
+import java.net.URISyntaxException
+import java.util.concurrent.TimeoutException
+import java.net.UnknownHostException
+import java.net.ConnectException
+
 import org.eclipse.jetty.client.api.Request
-import org.eclipse.jetty.client.api.Connection
-import org.eclipse.jetty.client.Origin
-import java.net.URL
+import java.net.URI
 
 import androidx.lifecycle.MutableLiveData
 
@@ -90,6 +92,16 @@ class PlayerService : Service() {
     }
 
     class TerminationMarker : Throwable()
+
+    class UnsupportedCodecException(
+        public val codecName: String,
+    ) : Exception()
+
+    class UnsupportedTransportException(
+        public val transportName: String,
+    ) : Exception()
+
+    class ConnectionClosedException : Exception()
 
     lateinit var mMainHandler: Handler
 
@@ -579,7 +591,13 @@ class PlayerService : Service() {
                         )
                         else -> {
                             Log.e(TAG, "aborting, content-type: $content_type")
-                            r.abort(Exception("Unsupported format $content_type"))
+                            r.abort(UnsupportedCodecException(
+                                        when (val ct = content_type) {
+                                            "audio/aac" -> "AAC"
+                                            "audio/aacp" -> "AAC+"
+                                            null -> "(no content type)"
+                                            else -> ct
+                                        }))
                             return@onResponseHeaders
                         }
                     }
@@ -663,10 +681,16 @@ class PlayerService : Service() {
             cb.onStationLoading(s)
             lastStation = s
 
-            val url = s.streamUrl
-            Log.d(TAG, "Playing URL: $url")
+            val surl = s.streamUrl
+            Log.d(TAG, "Playing URL: $surl")
 
-            val req = hc.newRequest(url)
+            val uri = URI(surl)
+            if (uri.scheme.lowercase() == "https") {
+                // instead of failing with NPE
+                throw UnsupportedTransportException("HTTPS")
+            }
+
+            val req = hc.newRequest(uri)
             setupRequest(req)
             setupStreamRecorder()
 
@@ -681,13 +705,17 @@ class PlayerService : Service() {
                     } else if (r.isFailed()) {
                         try {
                             Log.w(TAG, "http failed")
+                            var req_fail: Throwable? = null
                             r.getRequestFailure()?.let {
-                                Log.d(TAG, "req  fail", it)
+                                Log.d(TAG, "req  fail $it", it)
                                 cb.onError(it)
+                                req_fail = it
                             }
                             r.getResponseFailure()?.let {
-                                Log.d(TAG, "resp fail", it)
-                                cb.onError(it)
+                                Log.d(TAG, "resp fail $it", it)
+                                if (it != req_fail) {
+                                    cb.onError(it)
+                                }
                             }
                         } catch (e: Exception) {
                             Log.d(TAG, "exception while handling request failure", e)
@@ -696,6 +724,7 @@ class PlayerService : Service() {
                     } else {
                         // NOTE: probably lost network or station stopped
                         Log.i(TAG, "http stopped")
+                        cb.onError(ConnectionClosedException())
                     }
 
                     reset()
@@ -906,8 +935,21 @@ class PlayerService : Service() {
                 }
 
                 override fun onError(e: Throwable) {
+                    val s = when (e) {
+                        is URISyntaxException -> "Invalid station URL"
+                        is UnsupportedCodecException -> "Station uses unsupported codec ${e.codecName}"
+                        is UnsupportedTransportException -> "Station uses unsuppoted transport ${e.transportName}"
+                        is ConnectionClosedException -> "Connection closed unexpectedly"
+                        is TimeoutException -> "Connection timed out"
+                        is UnknownHostException -> "Failed to resolve hostname"
+                        is ConnectException -> "Failed to connect"
+                        else -> {
+                            Log.e(TAG, "Unhandled exception class ${e::class.java.canonicalName}")
+                            "Uncaught exception in player service"
+                        }
+                    }
                     Toast.makeText(
-                        this@PlayerService, "RadioPlayer: Uncaught exception in player service",
+                        this@PlayerService, "RadiuPlayer: $s",
                         Toast.LENGTH_LONG,
                     ).show()
                     // We’ll get an onPlaybackStateChanged as well
