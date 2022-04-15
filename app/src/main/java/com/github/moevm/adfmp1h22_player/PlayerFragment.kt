@@ -41,7 +41,7 @@ class PlayerFragment : Fragment(R.layout.fragment_player) {
         }
     }
 
-    fun setStrings(title: String, artist: String?) {
+    private fun setStrings(title: String, artist: String?) {
         tv_tracktitle.setText(title)
         if (artist == null) {
             tv_trackartist.setVisibility(View.INVISIBLE)
@@ -49,6 +49,18 @@ class PlayerFragment : Fragment(R.layout.fragment_player) {
             tv_trackartist.setText(artist)
             tv_trackartist.setVisibility(View.VISIBLE)
         }
+    }
+
+    private fun setStringsStation(station: Station?) {
+        if (station != null) {
+            setStrings(station.name, null)
+        } else {
+            setStrings("", null)
+        }
+    }
+
+    private fun setStringsMetaData(m: TrackMetaData) {
+        setStrings(m.title, m.artist)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -73,14 +85,14 @@ class PlayerFragment : Fragment(R.layout.fragment_player) {
         }
 
         playbackModel.station.observe(viewLifecycleOwner) { station ->
-            if (station != null) {
-                setStrings(station.name, null)
-            } else {
-                setStrings("", null)
-            }
+            setStringsStation(station)
         }
         playbackModel.metadata.observe(viewLifecycleOwner) { m ->
-            setStrings(m.title, m.artist)
+            if (m != null) {
+                setStringsMetaData(m)
+            } else {
+                setStringsStation(playbackModel.station.value)
+            }
         }
         playbackModel.state.observe(viewLifecycleOwner) {
             updateUiState()

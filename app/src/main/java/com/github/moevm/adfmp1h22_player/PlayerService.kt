@@ -879,6 +879,7 @@ class PlayerService : Service() {
     }
 
     private fun onStationLoading(s: Station?) {
+        mMetaData.postValue(null)
         mStation.postValue(s)
     }
 
