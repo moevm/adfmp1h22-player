@@ -84,21 +84,24 @@ class MainActivity : AppCompatActivity() {
                 pager.setCurrentItem(0)
             }
         }
+    }
 
+    override fun onResume() {
+        super.onResume()
         val i = Intent(this, PlayerService::class.java)
         startService(i)
         bindService(i, mServiceConnection, 0)
+    }
+
+    override fun onPause() {
+        doUnbind()
+        super.onPause()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         Log.d(TAG, "saving main activity")
         outState.putInt("page", pager.currentItem)
-    }
-
-    override fun onDestroy() {
-        doUnbind()
-        super.onDestroy()
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -132,14 +135,14 @@ class MainActivity : AppCompatActivity() {
 
         override fun onServiceConnected(n: ComponentName, sb: IBinder) {
             mServiceBinder = sb as PlayerService.PlayerServiceBinder
-            sb.service.mMetaData.observe(this@MainActivity) { m ->
-                playbackModel.metadata.setValue(m)
+            sb.service.mStation.observe(this@MainActivity) { s ->
+                playbackModel.station.setValue(s)
             }
             sb.service.mPlaybackState.observe(this@MainActivity) { stt ->
                 playbackModel.state.setValue(stt)
             }
-            sb.service.mStation.observe(this@MainActivity) { s ->
-                playbackModel.station.setValue(s)
+            sb.service.mMetaData.observe(this@MainActivity) { m ->
+                playbackModel.metadata.setValue(m)
             }
             while (!mCallbackQueue.isEmpty()) {
                 val cb = mCallbackQueue.remove()
