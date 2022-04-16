@@ -1,9 +1,6 @@
 package com.github.moevm.adfmp1h22_player
 
-import java.io.IOException
-import java.io.Reader
-import java.io.InputStreamReader
-
+import android.app.AlertDialog
 import android.util.Log
 import android.util.JsonReader
 
@@ -196,23 +193,32 @@ class StationListFragment : Fragment(R.layout.fragment_station_list) {
                 return when (mi.itemId) {
                     R.id.station_list_item_delete -> {
                         val n = tracker.getSelection().size()
-                        Toast.makeText(context, "Would delete $n station(s)",
-                                       Toast.LENGTH_SHORT)
-                            .show()
                         db = context?.let { SQLHelper(it) }
                         val manager = SQLiteAddedStationsManager(db!!)
                         val l = manager.getData();
+                        val st: MutableList<Station> = mutableListOf()
+                        var name: String
+                        var message = "Do you really want to delete the $n station?"
                         tracker.selection.forEach{
                             for(i in l){
                                 if(i.stationuuid == it.toString()){
+                                    if(n == 1){
+                                        name = i.name
+                                        message = "Do you really want to delete the station $name?"
+                                    }
                                     Log.d("TAG", i.toString())
-                                    l.remove(i)
-                                    a.submitList(l)
-                                    manager.deleteRow(i)
+                                    st.add(i)
                                     break
                                 }
                             }
                         }
+                        val builder = AlertDialog.Builder(requireActivity())
+                        builder.setMessage(message)
+                            .setCancelable(false)
+                            .setPositiveButton("Yes") {dialog, id -> deleteStation(st, l)}
+                            .setNegativeButton("No"){dialog, id -> {tracker.clearSelection()}}
+                        val alert = builder.create()
+                        alert.show()
                         tracker.clearSelection()
                         true
                     }
@@ -258,5 +264,16 @@ class StationListFragment : Fragment(R.layout.fragment_station_list) {
                 return false
             }
         }
+
+    fun deleteStation(st: MutableList<Station>, l: MutableList<Station>){
+        db = context?.let { SQLHelper(it) }
+        val manager = SQLiteAddedStationsManager(db!!)
+        for(i in st){
+            l.remove(i)
+            manager.deleteRow(i)
+        }
+        a.submitList(l)
+    }
+
 }
 

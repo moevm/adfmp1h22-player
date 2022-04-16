@@ -1,5 +1,6 @@
 package com.github.moevm.adfmp1h22_player
 
+import android.annotation.SuppressLint
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -20,12 +21,13 @@ class AddStationActivity : AppCompatActivity() {
 
     private var stationCatalogueUpdaterService: StationCatalogueUpdaterService? = null
     private var sBound: Boolean = false
+    private var binder :StationCatalogueUpdaterService.Service1Binder? = null
 
     private val boundServiceConnection = object : ServiceConnection {
         override fun onServiceConnected(p0: ComponentName?, p1: IBinder?) {
-            val binder : StationCatalogueUpdaterService.Service1Binder = p1 as StationCatalogueUpdaterService.Service1Binder
+            binder = p1 as StationCatalogueUpdaterService.Service1Binder
             if(!sBound) {
-                stationCatalogueUpdaterService = binder.getService()
+                stationCatalogueUpdaterService = binder!!.getService()
                 sBound = true
                 if(sBound){
                     val db = stationCatalogueUpdaterService?.db
@@ -41,26 +43,27 @@ class AddStationActivity : AppCompatActivity() {
 
                     searchStation.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
                         override fun onQueryTextSubmit(query: String?): Boolean {
-                            Log.d("TAG", "in SEARCH")
-                            if(query != null){
-                                Log.d("TAG", "in NOT NULL QUERY")
-                                val newStations :MutableList<Station> = mutableListOf()
-                                for(st in stationList){
-                                    if(st.name.contains(query)){
-                                        newStations.add(st)
-                                    }
-                                }
-                                Log.d("TAG", newStations.toString())
-                                Log.d("TAG", newStations.size.toString())
-                                if (newStations.size > 0) {
-                                    adapter.setStations(newStations)
-                                } else {
-                                    Toast.makeText(this@AddStationActivity, "No Match found", Toast.LENGTH_LONG).show()
-                                }
-                                return false
-                            }else{
-                                return false
-                            }
+//                            Log.d("TAG", "in SEARCH")
+//                            if(query != null){
+//                                Log.d("TAG", "in NOT NULL QUERY")
+//                                val newStations :MutableList<Station> = mutableListOf()
+//                                for(st in stationList){
+//                                    if(st.name.contains(query)){
+//                                        newStations.add(st)
+//                                    }
+//                                }
+//                                Log.d("TAG", newStations.toString())
+//                                Log.d("TAG", newStations.size.toString())
+//                                if (newStations.size > 0) {
+//                                    adapter.setStations(newStations)
+//                                } else {
+//                                    adapter.setStations(newStations)//////??????
+//                                }
+//                                return false
+//                            }else{
+//                                return false
+//                            }
+                            return false
                         }
 
                         override fun onQueryTextChange(newText: String?): Boolean {
@@ -72,9 +75,7 @@ class AddStationActivity : AppCompatActivity() {
                                         newStations.add(st)
                                     }
                                 }
-                                if (newStations.size > 0) {
-                                    adapter.setStations(newStations)
-                                }
+                                adapter.setStations(newStations)
                                 return false
                             }
                             ///
@@ -91,6 +92,8 @@ class AddStationActivity : AppCompatActivity() {
 
         override fun onServiceDisconnected(p0: ComponentName?) {
             sBound = false
+            binder = null
+
         }
 
     }
@@ -101,7 +104,6 @@ class AddStationActivity : AppCompatActivity() {
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         applicationContext.bindService(Intent(this, StationCatalogueUpdaterService::class.java), boundServiceConnection, Context.BIND_AUTO_CREATE)
     }
-
 
     override fun onSupportNavigateUp(): Boolean {
         finish()
