@@ -1,5 +1,6 @@
 package com.github.moevm.adfmp1h22_player
 
+import android.app.AlertDialog
 import android.app.ProgressDialog
 import android.content.ComponentName
 import android.content.Intent
@@ -18,7 +19,6 @@ import com.github.moevm.adfmp1h22_player.SQLite.SQLHelper
 import com.github.moevm.adfmp1h22_player.SQLite.SQLiteAllStationsManager
 import kotlinx.android.synthetic.main.activity_main.*
 import java.util.*
-import kotlin.concurrent.schedule
 
 
 class MainActivity : AppCompatActivity() {
@@ -33,37 +33,34 @@ class MainActivity : AppCompatActivity() {
 
     private val playbackModel: PlaybackModel by viewModels()
 
-    fun startProgress(){
-        progressDialog = ProgressDialog(this@MainActivity);
-        progressDialog!!.setTitle("My Content");
-        progressDialog!!.setMessage("Loading this Content, please wait!");
-        progressDialog!!.show()
-        Log.d("TAG", "in start Pr")
-    }
-    fun stopProgress(){
-        progressDialog!!.cancel()
-        Log.d("TAG", "in stop Pr")
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         startService(Intent(applicationContext, StationCatalogueUpdaterService::class.java))
 
-//        Это для отображения прогресс диалога, но оно не работает из-за while
-//        var db : SQLHelper? = null
-//        db = SQLHelper(applicationContext)
-//        val manager = SQLiteAllStationsManager(db)
-//
-//        var i = 0
-//        if(manager.emptyTable("AllStations")){
-//            startProgress()
-//            while (!manager.done){
-//                continue
-//            }
-//            stopProgress()
-//        }
+        var db : SQLHelper? = null
+        db = SQLHelper(applicationContext)
+        val manager = SQLiteAllStationsManager(db)
+        
+        if(manager.emptyTable("AllStations")){
+            progressDialog = ProgressDialog(this@MainActivity);
+            progressDialog!!.setTitle("Getting the catalog");
+            progressDialog!!.setMessage("Loading this Content, please wait!");
+            progressDialog!!.setProgressStyle(ProgressDialog.STYLE_SPINNER)
+            progressDialog!!.show()
+            progressDialog!!.setCancelable(false)
+            Thread {
+                try {
+                    while (manager.emptyTable("AllStations")){
+                        continue
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+                progressDialog!!.dismiss()
+            }.start()
+        }
 
         pager.adapter = object : FragmentStateAdapter(this) {
             override fun getItemCount(): Int = 2
