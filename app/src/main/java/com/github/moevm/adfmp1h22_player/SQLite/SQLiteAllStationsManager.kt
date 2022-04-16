@@ -11,6 +11,8 @@ class SQLiteAllStationsManager(
     private val db : SQLHelper
 ) {
 
+    var done = false
+
     fun emptyTable(tableName : String) : Boolean{
         val db = db.writableDatabase
         var empty : Boolean = true
@@ -54,6 +56,7 @@ class SQLiteAllStationsManager(
             }
             db.setTransactionSuccessful()
             Log.d("TAG", "Add new row in _NEW table")
+            done = true
         }catch (e: SQLiteConstraintException){
             Log.d("TAG", "SQLiteConstraintException if SQLiteAllStationsManagement")
         }finally {

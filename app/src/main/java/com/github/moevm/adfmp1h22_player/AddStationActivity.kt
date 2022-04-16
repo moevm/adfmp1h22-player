@@ -7,11 +7,13 @@ import android.content.ServiceConnection
 import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
+import android.util.TypedValue
 import android.widget.SearchView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.github.moevm.adfmp1h22_player.SQLite.SQLiteAddedStationsManager
 import com.github.moevm.adfmp1h22_player.SQLite.SQLiteAllStationsManager
+import com.squareup.picasso.Picasso
 import kotlinx.android.synthetic.main.activity_add_station.*
 import java.util.*
 
@@ -21,6 +23,7 @@ class AddStationActivity : AppCompatActivity() {
     private var stationCatalogueUpdaterService: StationCatalogueUpdaterService? = null
     private var sBound: Boolean = false
     private var binder :StationCatalogueUpdaterService.Service1Binder? = null
+
 
     private val boundServiceConnection = object : ServiceConnection {
         override fun onServiceConnected(p0: ComponentName?, p1: IBinder?) {
@@ -38,15 +41,24 @@ class AddStationActivity : AppCompatActivity() {
                     val layoutManager = LinearLayoutManager(applicationContext)
                     stationToAddList.layoutManager = layoutManager
 
+                    var nowPlaying : Station? = null
+
                     val adapter = AddStationAdapter(
                         stationList,
                         selectedStations,
-                        managerAdd,
+                        managerAdd
                     )
                     { s : Station ->
-//                        Log.d("TAG", s.toString())
-                        withPlayerService{
-                            it.startPlayingStation(s)
+                        if(s == nowPlaying){
+                            withPlayerService {
+                                it.stopPlayback()
+                                nowPlaying = s
+                            }
+                        }else {
+                            withPlayerService {
+                                it.startPlayingStation(s)
+                                nowPlaying = s
+                            }
                         }
                     }
 
@@ -54,26 +66,6 @@ class AddStationActivity : AppCompatActivity() {
 
                     searchStation.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
                         override fun onQueryTextSubmit(query: String?): Boolean {
-//                            Log.d("TAG", "in SEARCH")
-//                            if(query != null){
-//                                Log.d("TAG", "in NOT NULL QUERY")
-//                                val newStations :MutableList<Station> = mutableListOf()
-//                                for(st in stationList){
-//                                    if(st.name.contains(query)){
-//                                        newStations.add(st)
-//                                    }
-//                                }
-//                                Log.d("TAG", newStations.toString())
-//                                Log.d("TAG", newStations.size.toString())
-//                                if (newStations.size > 0) {
-//                                    adapter.setStations(newStations)
-//                                } else {
-//                                    adapter.setStations(newStations)//////??????
-//                                }
-//                                return false
-//                            }else{
-//                                return false
-//                            }
                             return false
                         }
 
@@ -109,13 +101,6 @@ class AddStationActivity : AppCompatActivity() {
 
     }
 
-//    fun play(s: Station){
-//        Log.d("TAG", "in On Click fo playing")
-//        Log.d("TAG", s.toString())
-//        withPlayerService{
-//            it.startPlayingStation(s)
-//        }
-//    }
 
     override fun onResume() {
         super.onResume()

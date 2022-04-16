@@ -1,24 +1,29 @@
 package com.github.moevm.adfmp1h22_player
 
-import java.util.LinkedList
-
-import androidx.activity.viewModels
+import android.app.ProgressDialog
+import android.content.ComponentName
+import android.content.Intent
+import android.content.ServiceConnection
+import android.os.Bundle
+import android.os.IBinder
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import android.os.Bundle
-import android.content.Intent
 import androidx.fragment.app.Fragment
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
+import com.github.moevm.adfmp1h22_player.SQLite.SQLHelper
+import com.github.moevm.adfmp1h22_player.SQLite.SQLiteAllStationsManager
 import kotlinx.android.synthetic.main.activity_main.*
+import java.util.*
+import kotlin.concurrent.schedule
 
-import android.content.ServiceConnection
-import android.content.ComponentName
-import android.os.IBinder
 
 class MainActivity : AppCompatActivity() {
+
+    var progressDialog: ProgressDialog? = null
 
     companion object {
         const val TAG = "MainActivity"
@@ -28,11 +33,37 @@ class MainActivity : AppCompatActivity() {
 
     private val playbackModel: PlaybackModel by viewModels()
 
+    fun startProgress(){
+        progressDialog = ProgressDialog(this@MainActivity);
+        progressDialog!!.setTitle("My Content");
+        progressDialog!!.setMessage("Loading this Content, please wait!");
+        progressDialog!!.show()
+        Log.d("TAG", "in start Pr")
+    }
+    fun stopProgress(){
+        progressDialog!!.cancel()
+        Log.d("TAG", "in stop Pr")
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         startService(Intent(applicationContext, StationCatalogueUpdaterService::class.java))
+
+//        Это для отображения прогресс диалога, но оно не работает из-за while
+//        var db : SQLHelper? = null
+//        db = SQLHelper(applicationContext)
+//        val manager = SQLiteAllStationsManager(db)
+//
+//        var i = 0
+//        if(manager.emptyTable("AllStations")){
+//            startProgress()
+//            while (!manager.done){
+//                continue
+//            }
+//            stopProgress()
+//        }
 
         pager.adapter = object : FragmentStateAdapter(this) {
             override fun getItemCount(): Int = 2

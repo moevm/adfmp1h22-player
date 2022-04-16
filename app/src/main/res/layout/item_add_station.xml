@@ -11,7 +11,22 @@
         android:layout_height="54dp"
         android:maxWidth="54dp"
         android:maxHeight="54dp"
+        android:visibility="visible"
         app:srcCompat="@drawable/ic_note"
+        app:layout_constraintHorizontal_bias="0.05"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"/>
+
+    <ImageView
+        android:id="@+id/station_play"
+        android:layout_width="54dp"
+        android:layout_height="54dp"
+        android:maxWidth="54dp"
+        android:maxHeight="54dp"
+        app:srcCompat="@drawable/ic_stop_54"
+        android:visibility="gone"
         app:layout_constraintHorizontal_bias="0.05"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
