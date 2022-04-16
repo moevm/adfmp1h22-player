@@ -158,9 +158,12 @@ class MainActivity : AppCompatActivity() {
         fun doAction(cb: (PlayerService) -> Unit) {
             val b = mServiceBinder
             if (b != null) {
+                Log.d(TAG, "doAction: immediate")
                 cb(b.service)
             } else {
                 mCallbackQueue.add(cb)
+                Log.d(TAG,
+                      "doAction: delaying, queue size ${mCallbackQueue.size}")
 
                 val i = Intent(this@MainActivity, PlayerService::class.java)
                 startService(i)
