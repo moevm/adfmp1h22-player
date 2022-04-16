@@ -1,9 +1,12 @@
 package com.github.moevm.adfmp1h22_player
 
 import android.annotation.SuppressLint
+import android.content.ComponentName
 import android.content.Intent
+import android.content.ServiceConnection
 import android.graphics.Color
 import android.graphics.drawable.Drawable
+import android.os.IBinder
 import android.util.DisplayMetrics
 import android.util.Log
 import android.view.LayoutInflater
@@ -21,10 +24,16 @@ import com.github.moevm.adfmp1h22_player.SQLite.SQLiteAddedStationsManager
 import com.github.moevm.adfmp1h22_player.SQLite.SQLiteAllStationsManager
 import com.squareup.picasso.Picasso
 import kotlinx.android.synthetic.main.activity_main.*
+import java.util.*
 
-class AddStationAdapter(private val st: List<Station>, private val selectedStations: List<Station>, private val manager: SQLiteAddedStationsManager) :
-    RecyclerView.Adapter<AddStationAdapter.Holder>(),
-    View.OnClickListener
+class AddStationAdapter(
+    private val st: List<Station>,
+    private val selectedStations: List<Station>,
+    private val manager: SQLiteAddedStationsManager,
+    private val OnClick: (Station) -> Unit
+    ) :
+    RecyclerView.Adapter<AddStationAdapter.Holder>()
+//    View.OnClickListener
 {
 
     private var stations = st
@@ -39,7 +48,7 @@ class AddStationAdapter(private val st: List<Station>, private val selectedStati
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): Holder {
         val v : View = LayoutInflater.from(parent.context).inflate(R.layout.item_add_station, parent, false)
-        v.setOnClickListener(this)
+//        v.setOnClickListener(this)
         return Holder(v)
     }
 
@@ -91,12 +100,13 @@ class AddStationAdapter(private val st: List<Station>, private val selectedStati
         val button : ImageButton = view.findViewById(R.id.imageAddButton)
     }
 
-    override fun onClick(p0: View?) {
-        val station = (p0?.tag as Station)
-        Log.d("TAG", "$station")
-        ///
-        // Запускать проигрывание.
-        ///
-    }
+//    override fun onClick(p0: View?) {
+//        val station = (p0?.tag as Station)
+//        Log.d("TAG", "$station")
+//        ///
+//        // Запускать проигрывание.
+//
+//        ///
+//    }
 
 }

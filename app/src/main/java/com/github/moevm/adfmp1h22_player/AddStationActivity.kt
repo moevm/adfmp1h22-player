@@ -15,6 +15,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.github.moevm.adfmp1h22_player.SQLite.SQLiteAddedStationsManager
 import com.github.moevm.adfmp1h22_player.SQLite.SQLiteAllStationsManager
 import kotlinx.android.synthetic.main.activity_add_station.*
+import java.util.*
 
 
 class AddStationActivity : AppCompatActivity() {
@@ -38,7 +39,10 @@ class AddStationActivity : AppCompatActivity() {
                     Log.d("TAG", selectedStations.toString())
                     val layoutManager = LinearLayoutManager(applicationContext)
                     stationToAddList.layoutManager = layoutManager
-                    val adapter = AddStationAdapter(stationList, selectedStations, managerAdd)
+                    val adapter = AddStationAdapter(
+                        stationList,
+                        selectedStations,
+                        managerAdd){}
                     stationToAddList.adapter = adapter
 
                     searchStation.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
@@ -97,6 +101,53 @@ class AddStationActivity : AppCompatActivity() {
         }
 
     }
+
+//    override fun onResume() {
+//        super.onResume()
+//        val i = Intent(this, PlayerService::class.java)
+//        startService(i)
+//        bindService(i, mServiceConnection, 0)
+//    }
+//
+//    override fun onPause() {
+//        doUnbind()
+//        super.onPause()
+//    }
+//    private val mServiceConnection = PlayerServiceConnection()
+//    inner class PlayerServiceConnection : ServiceConnection {
+//        private var mServiceBinder: PlayerService.PlayerServiceBinder? = null
+//        private val mCallbackQueue = LinkedList<(PlayerService) -> Unit>()
+//
+//        override fun onServiceConnected(n: ComponentName, sb: IBinder) {
+//            mServiceBinder = sb as PlayerService.PlayerServiceBinder
+//            while (!mCallbackQueue.isEmpty()) {
+//                val cb = mCallbackQueue.remove()
+//                cb(sb.service)
+//            }
+//        }
+//
+//        override fun onServiceDisconnected(n: ComponentName) {
+//            mServiceBinder = null;
+//            Log.e(MainActivity.TAG, "onServiceDisconnected")
+//        }
+//
+//        fun doAction(cb: (PlayerService) -> Unit) {
+//            val b = mServiceBinder
+//            if (b != null) {
+//                cb(b.service)
+//            } else {
+//                mCallbackQueue.add(cb)
+//
+//                val i = Intent(this@AddStationActivity, PlayerService::class.java)
+//                startService(i)
+//                bindService(i, this, 0)
+//            }
+//        }
+//    }
+//
+//    private fun doUnbind() {
+//        unbindService(mServiceConnection)
+//    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
