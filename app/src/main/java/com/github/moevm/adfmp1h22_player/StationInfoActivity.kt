@@ -18,6 +18,8 @@ class StationInfoActivity : AppCompatActivity() {
         stationNameView.text = info[0]
         stationUrlView.text = info[1]
         stationFormatView.text = info[2]
+        stationHomePageView.text = info[3]
+        stationCountryView.text = info[4]
 
     }
 

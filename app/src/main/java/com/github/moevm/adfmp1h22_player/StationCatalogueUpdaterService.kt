@@ -56,6 +56,8 @@ class StationCatalogueUpdaterService : Service() {
                                     resource[i].name.toString(),
                                     resource[i].url.toString(),
                                     resource[i].codec.toString(),
+                                    resource[i].homepage.toString(),
+                                    resource[i].country.toString(),
                                     resource[i].favicon.toString(),
                                 )
                                 stL.add(station)

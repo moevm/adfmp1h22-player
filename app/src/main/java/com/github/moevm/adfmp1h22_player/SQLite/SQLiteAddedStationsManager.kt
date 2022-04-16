@@ -22,6 +22,8 @@ class SQLiteAddedStationsManager(
                 SQLiteContract.AddedStationsTable.COLUMN_STREAMURL to item.streamUrl,
                 SQLiteContract.AddedStationsTable.COLUMN_FAVICON to item.faviconUrl,
                 SQLiteContract.AddedStationsTable.COLUMN_CODEC to item.codec,
+                SQLiteContract.AddedStationsTable.COLUMN_HOMEPAGE to item.homepage,
+                SQLiteContract.AddedStationsTable.COLUMN_COUNTRY to item.country,
                 SQLiteContract.AddedStationsTable.COLUMN_FAVICON_DATE to System.currentTimeMillis().toInt()
             ),
             SQLiteDatabase.CONFLICT_REPLACE
@@ -31,7 +33,9 @@ class SQLiteAddedStationsManager(
 
     fun deleteRow(item : Station){
         val db = db.writableDatabase
-        db.execSQL("DELETE FROM "+SQLiteContract.AddedStationsTable.TABLE_NAME+" WHERE ${SQLiteContract.AddedStationsTable.COLUMN_STATIONUUID} = ${item.stationuuid}");
+        db.execSQL(
+            "DELETE FROM "+SQLiteContract.AddedStationsTable.TABLE_NAME+" " +
+                    "WHERE ${SQLiteContract.AddedStationsTable.COLUMN_STATIONUUID} = '${item.stationuuid}'");
     }
 
     fun parseStation(c:Cursor) : Station{
@@ -41,6 +45,8 @@ class SQLiteAddedStationsManager(
             name = c.getString(c.getColumnIndexOrThrow(SQLiteContract.AddedStationsTable.COLUMN_NAME)).trimStart(),
             streamUrl = c.getString(c.getColumnIndexOrThrow(SQLiteContract.AddedStationsTable.COLUMN_STREAM_URL)),
             codec = c.getString(c.getColumnIndexOrThrow(SQLiteContract.AddedStationsTable.COLUMN_CODEC)),
+            homepage = c.getString(c.getColumnIndexOrThrow(SQLiteContract.AddedStationsTable.COLUMN_HOMEPAGE)),
+            country = c.getString(c.getColumnIndexOrThrow(SQLiteContract.AddedStationsTable.COLUMN_COUNTRY)),
             faviconUrl = c.getString(c.getColumnIndexOrThrow(SQLiteContract.AddedStationsTable.COLUMN_FAVICON)),
         )
     }

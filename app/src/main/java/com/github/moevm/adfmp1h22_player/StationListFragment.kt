@@ -101,7 +101,7 @@ class StationListFragment : Fragment(R.layout.fragment_station_list) {
             "station-list-selection",
             station_list,
             object : ItemKeyProvider<String>(ItemKeyProvider.SCOPE_CACHED) {
-                override fun getKey(pos: Int): String = a.currentList.get(pos).changeuuid
+                override fun getKey(pos: Int): String = a.currentList.get(pos).stationuuid
                 override fun getPosition(k: String): Int {
                     for (i in 0 until station_list.childCount) {
                         val v = station_list.getChildAt(i)
@@ -199,7 +199,20 @@ class StationListFragment : Fragment(R.layout.fragment_station_list) {
                         Toast.makeText(context, "Would delete $n station(s)",
                                        Toast.LENGTH_SHORT)
                             .show()
-                        // TODO: actually delete stuff
+                        db = context?.let { SQLHelper(it) }
+                        val manager = SQLiteAddedStationsManager(db!!)
+                        val l = manager.getData();
+                        tracker.selection.forEach{
+                            for(i in l){
+                                if(i.stationuuid == it.toString()){
+                                    Log.d("TAG", i.toString())
+                                    l.remove(i)
+                                    a.submitList(l)
+                                    manager.deleteRow(i)
+                                    break
+                                }
+                            }
+                        }
                         tracker.clearSelection()
                         true
                     }
@@ -208,24 +221,22 @@ class StationListFragment : Fragment(R.layout.fragment_station_list) {
                         db = context?.let { SQLHelper(it) }
                         val manager = SQLiteAddedStationsManager(db!!)
                         val l = manager.getData();
-//                        val info = mutableMapOf("name" to "", "url" to "", "format" to "")
                         var info :String = ""
                         tracker.selection.forEach{
-//                            Log.d("TAG", it.toString())
                             for(i in l){
-                                if(i.changeuuid == it.toString()){
+                                if(i.stationuuid == it.toString()){
                                     Log.d("TAG", i.toString())
                                     info += i.name
                                     info += "$"
                                     info += i.streamUrl
                                     info += "$"
                                     info += i.codec
-//                                    info["name"] = i.name
-//                                    info["url"] = i.streamUrl
-//                                    info["format"] = i.codec
+                                    info += "$"
+                                    info += i.homepage
+                                    info += "$"
+                                    info += i.country
                                 }
                             }
-//                            Log.d("TAG", "\n")
                         }
                         tracker.clearSelection()
                         val intent = Intent(context, StationInfoActivity::class.java)

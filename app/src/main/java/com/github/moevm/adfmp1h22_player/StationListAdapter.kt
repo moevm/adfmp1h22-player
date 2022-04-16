@@ -39,7 +39,7 @@ class StationListAdapter(private val onClick: (Station) -> Unit) :
         }
 
         val stationUuid: String
-            get () = currentStation?.changeuuid ?: ""
+            get () = currentStation?.stationuuid ?: ""
     }
 
     var tracker: SelectionTracker<String>? = null
@@ -55,7 +55,7 @@ class StationListAdapter(private val onClick: (Station) -> Unit) :
 
     override fun onBindViewHolder(holder: StationViewHolder, pos: Int) {
         val item = getItem(pos)
-        val id = item.changeuuid
+        val id = item.stationuuid
         val issel = tracker?.isSelected(id) ?: false
         holder.bind(item, issel)
     }

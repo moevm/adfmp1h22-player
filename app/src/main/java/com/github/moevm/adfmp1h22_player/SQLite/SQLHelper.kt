@@ -18,6 +18,8 @@ class SQLHelper(
                 SQLiteContract.AllStationsTable.COLUMN_STREAM_URL + " TEXT," +
                 SQLiteContract.AllStationsTable.COLUMN_FAVICON + " TEXT," +
                 SQLiteContract.AllStationsTable.COLUMN_CODEC + " TEXT," +
+                SQLiteContract.AllStationsTable.COLUMN_HOMEPAGE + " TEXT," +
+                SQLiteContract.AllStationsTable.COLUMN_COUNTRY + " TEXT," +
                 SQLiteContract.AllStationsTable.COLUMN_FAVICON_DATE +
                 " INTEGER NOT NULL)"
 
@@ -32,6 +34,8 @@ class SQLHelper(
                 SQLiteContract.AddedStationsTable.COLUMN_STREAM_URL + " TEXT," +
                 SQLiteContract.AddedStationsTable.COLUMN_FAVICON + " TEXT," +
                 SQLiteContract.AddedStationsTable.COLUMN_CODEC + " TEXT," +
+                SQLiteContract.AddedStationsTable.COLUMN_HOMEPAGE + " TEXT," +
+                SQLiteContract.AddedStationsTable.COLUMN_COUNTRY + " TEXT," +
                 SQLiteContract.AddedStationsTable.COLUMN_FAVICON_DATE +
                 " INTEGER NOT NULL)"
         db.execSQL(createTableAddedStations)
