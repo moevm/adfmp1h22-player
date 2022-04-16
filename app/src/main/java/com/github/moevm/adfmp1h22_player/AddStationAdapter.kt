@@ -32,8 +32,8 @@ class AddStationAdapter(
     private val manager: SQLiteAddedStationsManager,
     private val OnClick: (Station) -> Unit
     ) :
-    RecyclerView.Adapter<AddStationAdapter.Holder>()
-//    View.OnClickListener
+    RecyclerView.Adapter<AddStationAdapter.Holder>(),
+    View.OnClickListener
 {
 
     private var stations = st
@@ -48,7 +48,7 @@ class AddStationAdapter(
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): Holder {
         val v : View = LayoutInflater.from(parent.context).inflate(R.layout.item_add_station, parent, false)
-//        v.setOnClickListener(this)
+        v.setOnClickListener(this)
         return Holder(v)
     }
 
@@ -100,13 +100,13 @@ class AddStationAdapter(
         val button : ImageButton = view.findViewById(R.id.imageAddButton)
     }
 
-//    override fun onClick(p0: View?) {
-//        val station = (p0?.tag as Station)
-//        Log.d("TAG", "$station")
-//        ///
-//        // Запускать проигрывание.
-//
-//        ///
-//    }
+    override fun onClick(p0: View?) {
+        val station = (p0?.tag as Station)
+        Log.d("TAG", "$station")
+        ///
+        // Запускать проигрывание.
+        OnClick(station)
+        ///
+    }
 
 }

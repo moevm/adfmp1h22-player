@@ -33,46 +33,6 @@ import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 
-// Throws IOException
-//fun readStationList(r: JsonReader): List<Station> {
-//    r.beginArray()
-//    val l = mutableListOf<Station>()
-//    while (r.hasNext()) {
-//        r.beginObject()
-//        var changeUuid: String? = null
-//        var stationuuid : String? = null
-//        var name: String? = null
-//        var streamUrl: String? = null
-//        var faviconUrl: String? = null
-//        while (r.hasNext()) {
-//            when (r.nextName()) {
-//                "changeuuid" -> changeUuid = r.nextString()
-//                "stationuuid" -> stationuuid = r.nextString()
-//                "name" -> name = r.nextString()
-//                "url" -> streamUrl = r.nextString()
-//                "favicon" -> faviconUrl = r.nextString()
-//                else -> r.skipValue()
-//            }
-//        }
-//        r.endObject()
-//        if (changeUuid != null
-//            && stationuuid != null
-//            && name != null
-//            && streamUrl != null
-//            && faviconUrl != null) {
-//            l.add(Station(
-//                      changeUuid,
-//                      stationuuid,
-//                      name,
-//                      streamUrl,
-//                      faviconUrl,
-//            ))
-//        }
-//    }
-//    r.endArray()
-//    return l
-//}
-
 class StationListFragment : Fragment(R.layout.fragment_station_list) {
 
     var onSetStation: ((Station) -> Unit)? = null
