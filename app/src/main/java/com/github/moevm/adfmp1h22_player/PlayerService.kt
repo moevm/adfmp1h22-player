@@ -987,7 +987,7 @@ class PlayerService : Service() {
 
         val notificationManager =
             getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        notificationManager.notify(TAG, NOTIF_ID, notification)
+        notificationManager.notify(NOTIF_ID, notification)
     }
 
     private fun makeNotification(): Notification {
