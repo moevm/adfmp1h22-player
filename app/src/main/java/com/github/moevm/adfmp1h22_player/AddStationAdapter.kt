@@ -62,29 +62,33 @@ class AddStationAdapter(
 
         holder.trName.text = station.name
         holder.itemView.tag = station
-        holder.itemView.isEnabled = true
+//        holder.itemView.isEnabled = true
 
-        if(selectedStations.indexOf(station) != -1){
-            holder.itemView.isEnabled = false
-            holder.button.setClickable(false)
-            holder.button.setEnabled(false)
-            holder.trName.setTextColor(Color.LTGRAY)
-            holder.button.setColorFilter(Color.LTGRAY)
+        if(nowPlaying == station && nowPlaying != null){
+            holder.stop.visibility = android.view.View.VISIBLE
+            holder.favicon.visibility = android.view.View.INVISIBLE
+//                holder.addButton.setClickable(false)
+//                holder.addButton.setEnabled(false)
+//                holder.addButton.setColorFilter(Color.LTGRAY)
         }else{
-            holder.itemView.isEnabled = true
-            if(nowPlaying == station && nowPlaying != null){
-                holder.stop.visibility = android.view.View.VISIBLE
-                holder.favicon.visibility = android.view.View.INVISIBLE
-                holder.button.setClickable(false)
-                holder.button.setEnabled(false)
-                holder.button.setColorFilter(Color.LTGRAY)
-            }else{
-                holder.stop.visibility = android.view.View.GONE
-                holder.favicon.visibility = android.view.View.VISIBLE
-                holder.button.setClickable(true)
-                holder.button.setEnabled(true)
-                holder.button.setColorFilter(holder.themeColor)
-            }
+            holder.stop.visibility = android.view.View.GONE
+            holder.favicon.visibility = android.view.View.VISIBLE
+//                holder.addButton.setClickable(true)
+//                holder.addButton.setEnabled(true)
+//                holder.addButton.setColorFilter(holder.themeColor)
+        }
+        if(selectedStations.indexOf(station) != -1){
+//            holder.itemView.isEnabled = false
+//            holder.addButton.setClickable(false)
+//            holder.addButton.setEnabled(false)
+            holder.addButton.visibility = android.view.View.GONE
+            holder.removeButton.visibility = android.view.View.VISIBLE
+            holder.trName.setTextColor(Color.LTGRAY)
+//            holder.addButton.setColorFilter(Color.LTGRAY)
+        }else{
+//            holder.itemView.isEnabled = true
+            holder.addButton.visibility = android.view.View.VISIBLE
+            holder.removeButton.visibility = android.view.View.GONE
             if(station.codec != "MP3" || station.streamUrl.split(":")[0] == "https"){
                 holder.trName.setTextColor(Color.RED)
             }
@@ -101,13 +105,29 @@ class AddStationAdapter(
                 .error(R.drawable.ic_station_placeholder_54)
                 .into(holder.favicon)
         }
-        holder.button.setOnClickListener {
+
+        holder.removeButton.setOnClickListener {
+            Log.d("TAG","click on -")
+            holder.trName.setTextColor(holder.themeColor)
+            holder.addButton.visibility = android.view.View.VISIBLE
+            holder.removeButton.visibility = android.view.View.GONE
+            val t : Thread = object  : Thread(){
+                override fun run(){
+                    manager.deleteRow(station)
+                }
+            }
+            t.start()
+        }
+
+        holder.addButton.setOnClickListener {
             Log.d("TAG", "click on +")
-            holder.itemView.isEnabled = false
+//            holder.itemView.isEnabled = false
             holder.trName.setTextColor(Color.LTGRAY)
-            holder.button.setColorFilter(Color.LTGRAY)
-            holder.button.setClickable(false)
-            holder.button.setEnabled(false)
+            holder.addButton.visibility = android.view.View.GONE
+            holder.removeButton.visibility = android.view.View.VISIBLE
+//            holder.addButton.setColorFilter(Color.LTGRAY)
+//            holder.addButton.setClickable(false)
+//            holder.addButton.setEnabled(false)
             val t : Thread = object  : Thread(){
                 override fun run(){
                     manager.insertRow(station)
@@ -121,7 +141,8 @@ class AddStationAdapter(
     class Holder(view: View) : RecyclerView.ViewHolder(view) {
         val trName : TextView = view.findViewById(R.id.station_name)
         val favicon : ImageView = view.findViewById(R.id.station_favicon)
-        val button : ImageButton = view.findViewById(R.id.imageAddButton)
+        val addButton : ImageButton = view.findViewById(R.id.imageAddButton)
+        val removeButton : ImageButton = view.findViewById(R.id.imageRemoveButton)
         val stop : ImageView = view.findViewById(R.id.station_play)
         val tv = TypedValue()
         val ok = view.context.theme.resolveAttribute(android.R.attr.colorForeground, tv, true)
