@@ -56,6 +56,14 @@
         <service
             android:name=".RecordingManagerService"
             android:exported="false" />
+        <receiver android:name=".PlayerBroadcastReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.github.moevm.adfmp1h22_player.ACTION_STOP" />
+                <action android:name="com.github.moevm.adfmp1h22_player.ACTION_RESUME" />
+                <action android:name="com.github.moevm.adfmp1h22_player.ACTION_PAUSE" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>

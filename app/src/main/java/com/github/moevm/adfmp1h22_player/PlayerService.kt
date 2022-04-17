@@ -21,36 +21,29 @@ import java.util.LinkedList
 import android.content.Context
 import android.widget.Toast
 
-import android.util.Log
-import java.lang.Thread
-
-import java.util.concurrent.ConcurrentLinkedQueue
-import android.media.MediaCodec
-import android.media.MediaFormat
-import android.media.AudioTrack
-import android.media.AudioAttributes
-import android.media.AudioFormat
-import android.media.AudioManager
-
-import org.eclipse.jetty.client.HttpClient
-import java.lang.Exception
-import java.nio.ByteBuffer
-
-import android.os.Build
-import android.app.NotificationManager
-import android.app.NotificationChannel
-import androidx.core.app.NotificationCompat
-import android.app.Notification
-
-import android.os.HandlerThread
-import android.os.Handler
-import android.os.Looper
-import android.os.Message
-
-import android.os.Binder
-import android.os.IBinder
+import android.annotation.SuppressLint
+import android.app.*
+import android.content.ComponentName
 import android.content.Intent
-import android.app.Service
+import android.content.Intent.getIntent
+import android.content.Intent.parseIntent
+import android.graphics.Color
+import android.media.*
+import android.media.session.MediaSession
+import android.os.*
+import android.support.v4.media.session.MediaSessionCompat
+import android.support.v4.media.session.PlaybackStateCompat
+import android.util.Log
+import android.widget.Toast
+import androidx.core.app.NotificationCompat
+import androidx.lifecycle.MutableLiveData
+import androidx.media.app.NotificationCompat.MediaStyle
+import androidx.media.session.MediaButtonReceiver
+import org.eclipse.jetty.client.HttpClient
+import org.eclipse.jetty.client.api.Request
+import java.nio.ByteBuffer
+import java.util.*
+import java.util.concurrent.ConcurrentLinkedQueue
 
 
 fun parseTrackTitle(s: String): TrackMetaData {
@@ -893,7 +886,6 @@ class PlayerService : Service() {
     }
 
     override fun onBind(intent: Intent): IBinder? = PlayerServiceBinder()
-
     private fun makeNotification(): Notification {
         val nm = getSystemService(NotificationManager::class.java)
 
@@ -901,18 +893,62 @@ class PlayerService : Service() {
             val chan = NotificationChannel(
                 NOTIF_CHANNEL_ID,
                 "Default",
-                NotificationManager.IMPORTANCE_LOW
+                NotificationManager.IMPORTANCE_HIGH
             )
+            chan.enableLights(true)
+            chan.lightColor = Color.BLUE
             nm.createNotificationChannel(chan)
             NotificationCompat.Builder(this, chan.id)
         } else {
             NotificationCompat.Builder(this)
         }
 
+        val resultIntent = Intent(this, MainActivity::class.java)
+        val resultPendingIntent = PendingIntent.getActivity(
+            this, 0, resultIntent,
+            PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val stopIntent = Intent(this, PlayerBroadcastReceiver::class.java)
+        stopIntent.setAction(PlayerBroadcastReceiver.ACTION_STOP)
+        val stopPendingIntent = PendingIntent.getBroadcast(
+            this, 0, stopIntent,
+            PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val mySession = MediaSessionCompat(this, TAG)
+        val sessionToken = mySession.sessionToken
+        val mediaSession = mySession.mediaSession as MediaSession
+        mediaSession.setCallback(object : MediaSession.Callback() {
+            override fun onPause() {
+                super.onPause()
+                Log.d(TAG, "Paused")
+            }
+
+            }, mHandler) // TODO
+//        mediaSession.setMediaButtonBroadcastReceiver(ComponentName(this, PlayerBroadcastReceiver::class.java)) // TODO
+
+        val stopAction: NotificationCompat.Action = NotificationCompat.Action(
+            R.drawable.ic_stop_24, "Stop", stopPendingIntent
+        )
+
         val notif = builder
             .setSmallIcon(R.drawable.ic_note)
             .setContentTitle("Radio Player")
             .setContentText("Service is running")
+            .addAction(stopAction)
+            .addAction(R.drawable.ic_play_64, "play", null)
+            .addAction(R.drawable.ic_downward,"prev", null)
+            .addAction(R.drawable.ic_add_24,"next", null)
+            .setStyle(MediaStyle()
+                .setShowActionsInCompactView(0,1,2)
+                .setMediaSession(sessionToken)
+                )
+            .setContentIntent(resultPendingIntent)
+            .setColorized(true)
+            .setUsesChronometer(true)
+            .setColor(Color.MAGENTA)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .build()
 
@@ -1000,4 +1036,28 @@ class PlayerService : Service() {
         }
         unbindService(mRecMgrConn)
     }
+
+//    override fun onHandleIntent(intent: Intent?) {
+//        if (intent == null) {
+//            Log.d("intentDetect", "Unusable intent")
+//        } else {
+//            Log.d("intentDetect", intent.getIntExtra("action", -1).toString())
+//            Log.d("intentDetect", CMD_STOP_PLAYBACK.toString())
+//            Log.d("intentDetect", CMD_RESUME_PLAYBACK.toString())
+//            when (intent.getIntExtra("action", -1)) {
+//                CMD_STOP_PLAYBACK -> {
+//                    this.stopPlayback()
+//                }
+//                CMD_RESUME_PLAYBACK -> {
+//                    this.resumePlayback()
+//                }
+//                else -> {
+//                    Log.d(
+//                        "IntentDetect",
+//                        "Cannot parse Intent" + intent.getIntExtra("action", -1).toString()
+//                    )
+//                }
+//            }
+//        }
+//    }
 }
