@@ -905,7 +905,7 @@ class PlayerService : Service() {
             val chan = NotificationChannel(
                 NOTIF_CHANNEL_ID,
                 "Default",
-                NotificationManager.IMPORTANCE_HIGH
+                NotificationManager.IMPORTANCE_LOW
             )
             chan.enableLights(true)
             chan.lightColor = Color.BLUE
