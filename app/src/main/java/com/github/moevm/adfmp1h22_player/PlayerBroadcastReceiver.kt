@@ -25,7 +25,8 @@ class PlayerBroadcastReceiver : BroadcastReceiver() {
                     Intent(context, PlayerService::class.java)
                 ) as PlayerService.PlayerServiceBinder
                 val srv = binder.service
-
+                srv.mediaStyle
+                    .setShowActionsInCompactView(0, 1)
                 srv.stopPlayback()
             }
             ACTION_RESUME -> {
@@ -36,6 +37,8 @@ class PlayerBroadcastReceiver : BroadcastReceiver() {
                 ) as PlayerService.PlayerServiceBinder
                 val srv = binder.service
 
+                srv.mediaStyle
+                    .setShowActionsInCompactView(0, 2)
                 srv.resumePlayback()
             }
             ACTION_PAUSE -> {
@@ -46,6 +49,8 @@ class PlayerBroadcastReceiver : BroadcastReceiver() {
                 ) as PlayerService.PlayerServiceBinder
                 val srv = binder.service
 
+                srv.mediaStyle
+                    .setShowActionsInCompactView(0, 1)
                 srv.pausePlayback()
             }
             else -> {

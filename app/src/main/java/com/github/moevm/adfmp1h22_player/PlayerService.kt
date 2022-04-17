@@ -20,6 +20,7 @@ import android.app.*
 import android.content.ComponentName
 import android.content.Intent
 import android.graphics.Color
+import android.graphics.drawable.Icon
 import android.media.*
 import android.os.*
 import android.support.v4.media.session.MediaSessionCompat
@@ -89,10 +90,11 @@ class PlayerService : Service() {
     var mAudioSid: Int = -1
     lateinit var mThread: PlayerThread
     lateinit var mHandler: Handler
-    val mMetaData = MutableLiveData<TrackMetaData>()
+    val mMetaData = MutableLiveData<TrackMetaData?>()
     val mPlaybackState = MutableLiveData<PlaybackState>(PlaybackState.STOPPED)
     val mStation = MutableLiveData<Station>()
     val mRecMgrConn = RecMgrSvrConnection()
+    var mediaStyle: MediaStyle = MediaStyle()
 
     inner class RecMgrSvrConnection : ServiceConnection {
         private var mServiceBinder: RecordingManagerService.ServiceBinder? = null
@@ -873,7 +875,7 @@ class PlayerService : Service() {
 
     private fun onStationLoading(s: Station?) {
         mMetaData.postValue(null)
-        mStation.postValue(s)
+        mStation.postValue(s!!)
     }
 
     inner class PlayerServiceBinder : Binder() {
@@ -947,13 +949,14 @@ class PlayerService : Service() {
             .setSmallIcon(R.drawable.ic_note)
             .setContentTitle("Radio Player")
             .setContentText("Service is running")
-            .addAction(stopAction)
-            .addAction(pauseAction)
             .addAction(resumeAction)
+            .addAction(pauseAction)
             .setStyle(
-                MediaStyle()
-                    .setShowActionsInCompactView(0, 1, 2)
+                mediaStyle
+                    .setShowActionsInCompactView(0, 1)
                     .setMediaSession(sessionToken)
+                    .setCancelButtonIntent(stopPendingIntent)
+                    .setShowCancelButton(true)
             )
             .setContentIntent(resultPendingIntent)
             .setColorized(true)
@@ -1047,28 +1050,4 @@ class PlayerService : Service() {
         }
         unbindService(mRecMgrConn)
     }
-
-//    override fun onHandleIntent(intent: Intent?) {
-//        if (intent == null) {
-//            Log.d("intentDetect", "Unusable intent")
-//        } else {
-//            Log.d("intentDetect", intent.getIntExtra("action", -1).toString())
-//            Log.d("intentDetect", CMD_STOP_PLAYBACK.toString())
-//            Log.d("intentDetect", CMD_RESUME_PLAYBACK.toString())
-//            when (intent.getIntExtra("action", -1)) {
-//                CMD_STOP_PLAYBACK -> {
-//                    this.stopPlayback()
-//                }
-//                CMD_RESUME_PLAYBACK -> {
-//                    this.resumePlayback()
-//                }
-//                else -> {
-//                    Log.d(
-//                        "IntentDetect",
-//                        "Cannot parse Intent" + intent.getIntExtra("action", -1).toString()
-//                    )
-//                }
-//            }
-//        }
-//    }
 }
