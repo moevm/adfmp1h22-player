@@ -59,13 +59,7 @@ class AddStationAdapter(
 
     override fun onBindViewHolder(holder: Holder, position: Int) {
         val station = stations[position]
-        if(nowPlaying == station && nowPlaying != null){
-            holder.stop.visibility = android.view.View.VISIBLE
-            holder.favicon.visibility = android.view.View.INVISIBLE
-        }else{
-            holder.stop.visibility = android.view.View.GONE
-            holder.favicon.visibility = android.view.View.VISIBLE
-        }
+
         holder.trName.text = station.name
         holder.itemView.tag = station
         holder.itemView.isEnabled = true
@@ -78,9 +72,19 @@ class AddStationAdapter(
             holder.button.setColorFilter(Color.LTGRAY)
         }else{
             holder.itemView.isEnabled = true
-            holder.button.setClickable(true)
-            holder.button.setEnabled(true)
-            holder.button.setColorFilter(holder.themeColor)
+            if(nowPlaying == station && nowPlaying != null){
+                holder.stop.visibility = android.view.View.VISIBLE
+                holder.favicon.visibility = android.view.View.INVISIBLE
+                holder.button.setClickable(false)
+                holder.button.setEnabled(false)
+                holder.button.setColorFilter(Color.LTGRAY)
+            }else{
+                holder.stop.visibility = android.view.View.GONE
+                holder.favicon.visibility = android.view.View.VISIBLE
+                holder.button.setClickable(true)
+                holder.button.setEnabled(true)
+                holder.button.setColorFilter(holder.themeColor)
+            }
             if(station.codec != "MP3" || station.streamUrl.split(":")[0] == "https"){
                 holder.trName.setTextColor(Color.RED)
             }

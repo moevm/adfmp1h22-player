@@ -42,7 +42,7 @@ class MainActivity : AppCompatActivity() {
         var db : SQLHelper? = null
         db = SQLHelper(applicationContext)
         val manager = SQLiteAllStationsManager(db)
-        
+
         if(manager.emptyTable("AllStations")){
             progressDialog = ProgressDialog(this@MainActivity);
             progressDialog!!.setTitle("Getting the catalog");

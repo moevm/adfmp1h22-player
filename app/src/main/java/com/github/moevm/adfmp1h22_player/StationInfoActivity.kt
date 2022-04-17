@@ -16,10 +16,10 @@ class StationInfoActivity : AppCompatActivity() {
         val info = arguments!!["info"].toString().split('$')
         Log.d("TAG", info.toString())
         stationNameView.text = info[0]
-        stationUrlView.text = info[1]
-        stationFormatView.text = info[2]
-        stationHomePageView.text = info[3]
-        stationCountryView.text = info[4]
+        stationUrlViewName.text = info[1]
+        stationFormatViewName.text = info[2]
+        stationHomePageViewName.text = info[3]
+        stationCountryViewName.text = info[4]
 
     }
 

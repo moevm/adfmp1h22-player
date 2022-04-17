@@ -7,6 +7,21 @@
     tools:context=".StationInfoActivity">
 
     <TextView
+        android:id="@+id/stationNameView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:layout_marginBottom="20dp"
+        android:text="@string/station_name"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/stationHomePageView"/>
+
+
+
+    <TextView
         android:id="@+id/stationHomePageView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -46,15 +61,64 @@
         app:layout_constraintStart_toStartOf="@+id/stationFormatView"
         app:layout_constraintTop_toBottomOf="@+id/stationFormatView" />
 
+
+    <androidx.constraintlayout.widget.Barrier
+        android:id="@+id/barrierV"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:barrierDirection="end"
+        app:constraint_referenced_ids="stationHomePageView, stationUrlView, stationFormatView, stationCountryView"
+        />
+
+    <Space
+        android:id="@+id/spaceBarrierV"
+        android:layout_width="20dp"
+        android:layout_height="0dp"
+        app:layout_constraintStart_toEndOf="@+id/barrierV"
+        />
+
     <TextView
-        android:id="@+id/stationNameView"
+        android:id="@+id/stationHomePageViewName"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="29dp"
-        android:text="@string/station_name"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.5"
-        app:layout_constraintStart_toStartOf="parent"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="84dp"
+        android:lines="1"
+        android:ellipsize="end"
+        android:text="@string/station_home_page"
+        app:layout_constraintStart_toStartOf="@id/barrierV"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <TextView
+        android:id="@+id/stationCountryViewName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginVertical="9dp"
+        android:layout_marginTop="9dp"
+        android:text="@string/station_country"
+        app:layout_constraintStart_toStartOf="@id/stationHomePageViewName"
+        app:layout_constraintTop_toBottomOf="@+id/stationHomePageViewName" />
+
+    <TextView
+        android:id="@+id/stationFormatViewName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginVertical="9dp"
+        android:layout_marginTop="6dp"
+        android:text="@string/station_file_format"
+        app:layout_constraintStart_toStartOf="@+id/stationCountryViewName"
+        app:layout_constraintTop_toBottomOf="@+id/stationCountryViewName" />
+
+    <TextView
+        android:id="@+id/stationUrlViewName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginVertical="9dp"
+        android:layout_marginTop="8dp"
+        android:text="@string/station_url"
+        android:lines="1"
+        android:ellipsize="end"
+        app:layout_constraintStart_toStartOf="@+id/stationFormatViewName"
+        app:layout_constraintTop_toBottomOf="@+id/stationFormatViewName"
+        />
 </androidx.constraintlayout.widget.ConstraintLayout>
