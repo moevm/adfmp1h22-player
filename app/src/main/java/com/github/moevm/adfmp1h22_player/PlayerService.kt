@@ -3,7 +3,6 @@ package com.github.moevm.adfmp1h22_player
 import java.nio.channels.AsynchronousFileChannel
 import java.nio.file.StandardOpenOption
 
-import android.content.ComponentName
 import android.content.ServiceConnection
 
 import java.net.URISyntaxException
@@ -11,48 +10,37 @@ import java.util.concurrent.TimeoutException
 import java.net.UnknownHostException
 import java.net.ConnectException
 
-import org.eclipse.jetty.client.api.Request
 import java.net.URI
-
-import androidx.lifecycle.MutableLiveData
 
 import java.util.LinkedList
 
 import android.content.Context
-import android.widget.Toast
 
-import android.annotation.SuppressLint
 import android.app.*
 import android.content.ComponentName
 import android.content.Intent
-import android.content.Intent.getIntent
-import android.content.Intent.parseIntent
 import android.graphics.Color
 import android.media.*
-import android.media.session.MediaSession
 import android.os.*
 import android.support.v4.media.session.MediaSessionCompat
-import android.support.v4.media.session.PlaybackStateCompat
 import android.util.Log
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.MutableLiveData
 import androidx.media.app.NotificationCompat.MediaStyle
-import androidx.media.session.MediaButtonReceiver
 import org.eclipse.jetty.client.HttpClient
 import org.eclipse.jetty.client.api.Request
 import java.nio.ByteBuffer
-import java.util.*
 import java.util.concurrent.ConcurrentLinkedQueue
 
 
 fun parseTrackTitle(s: String): TrackMetaData {
-    val spl = s.split(" - ", limit=2)
+    val spl = s.split(" - ", limit = 2)
     return if (spl.size == 2) {
         TrackMetaData(
             s,
-            title=spl[1],
-            artist=spl[0],
+            title = spl[1],
+            artist = spl[0],
         )
     } else {
         TrackMetaData(s, s, null)
@@ -349,8 +337,10 @@ class PlayerService : Service() {
                                 buf.clear()
 
                                 if (endflag) {
-                                    mc.queueInputBuffer(index, 0, 0, timestamp,
-                                                        MediaCodec.BUFFER_FLAG_END_OF_STREAM)
+                                    mc.queueInputBuffer(
+                                        index, 0, 0, timestamp,
+                                        MediaCodec.BUFFER_FLAG_END_OF_STREAM
+                                    )
                                     return
                                 }
 
@@ -359,8 +349,11 @@ class PlayerService : Service() {
                                 // delay from before entering pause
                                 val ps = paused_bufsize
                                 val can_give = ps == null || bqueue.size > ps
-                                val inf = if (can_give) { bqueue.poll() }
-                                          else { null }
+                                val inf = if (can_give) {
+                                    bqueue.poll()
+                                } else {
+                                    null
+                                }
                                 val t = timestamp
                                 if (inf != null) {
                                     if (inf.buf.remaining() <= buf.remaining()) {
@@ -404,7 +397,8 @@ class PlayerService : Service() {
                                 }
 
                                 while (!metaqueue.isEmpty()
-                                       && info.presentationTimeUs >= metaqueue.get(0).timestamp) {
+                                    && info.presentationTimeUs >= metaqueue.get(0).timestamp
+                                ) {
                                     cb.onMetaData(metaqueue.remove().meta)
                                 }
 
@@ -542,10 +536,10 @@ class PlayerService : Service() {
 
                                                 Log.d(TAG, "requesting recording for ${m.original}")
                                                 recmgr!!.requestNewRecording(m, "audio/mpeg") { r ->
-                                                     handler.post {
-                                                         Log.d(TAG, "new track: ${r.uuid}")
-                                                         streamrec!!.onNewTrack(r)
-                                                     }
+                                                    handler.post {
+                                                        Log.d(TAG, "new track: ${r.uuid}")
+                                                        streamrec!!.onNewTrack(r)
+                                                    }
                                                 }
                                             }
 
@@ -584,13 +578,16 @@ class PlayerService : Service() {
                         )
                         else -> {
                             Log.e(TAG, "aborting, content-type: $content_type")
-                            r.abort(UnsupportedCodecException(
-                                        when (val ct = content_type) {
-                                            "audio/aac" -> "AAC"
-                                            "audio/aacp" -> "AAC+"
-                                            null -> "(no content type)"
-                                            else -> ct
-                                        }))
+                            r.abort(
+                                UnsupportedCodecException(
+                                    when (val ct = content_type) {
+                                        "audio/aac" -> "AAC"
+                                        "audio/aacp" -> "AAC+"
+                                        null -> "(no content type)"
+                                        else -> ct
+                                    }
+                                )
+                            )
                             return@onResponseHeaders
                         }
                     }
@@ -649,8 +646,10 @@ class PlayerService : Service() {
                         )
                     }
 
-                    override fun onTrackDone(r: Recording, chan: AsynchronousFileChannel,
-                                             interrupted: Boolean) {
+                    override fun onTrackDone(
+                        r: Recording, chan: AsynchronousFileChannel,
+                        interrupted: Boolean
+                    ) {
                         Log.d(TAG, "track ${r.uuid} done")
                         chan.close()
                         if (!interrupted) {
@@ -690,7 +689,8 @@ class PlayerService : Service() {
             req.send { r ->
                 handler.post {
                     if (r.getRequestFailure() == null
-                        && r.getResponseFailure() is TerminationMarker) {
+                        && r.getResponseFailure() is TerminationMarker
+                    ) {
                         Log.i(TAG, "HTTP Response terminated")
 
                         // No need to call reset() again
@@ -738,7 +738,7 @@ class PlayerService : Service() {
                 }
                 CMD_PAUSE_PLAYBACK -> {
                     val sz = bqueue.size
-                    paused_bufsize = if (sz >= max_frames) max_frames-1 else sz
+                    paused_bufsize = if (sz >= max_frames) max_frames - 1 else sz
                     cb.onPlaybackStateChanged(PlaybackState.PAUSED)
                     true
                 }
@@ -878,7 +878,7 @@ class PlayerService : Service() {
 
     inner class PlayerServiceBinder : Binder() {
         val service: PlayerService
-            get () = this@PlayerService
+            get() = this@PlayerService
     }
 
     override fun onStartCommand(intent: Intent, flags: Int, id: Int): Int {
@@ -903,9 +903,12 @@ class PlayerService : Service() {
             NotificationCompat.Builder(this)
         }
 
-        val resultIntent = Intent(this, MainActivity::class.java)
+        val mySession = MediaSessionCompat(this, TAG)
+        val sessionToken = mySession.sessionToken
+
+        val mainPageIntent = Intent(this, MainActivity::class.java)
         val resultPendingIntent = PendingIntent.getActivity(
-            this, 0, resultIntent,
+            this, 0, mainPageIntent,
             PendingIntent.FLAG_IMMUTABLE
         )
 
@@ -915,35 +918,43 @@ class PlayerService : Service() {
             this, 0, stopIntent,
             PendingIntent.FLAG_IMMUTABLE
         )
+        val pauseIntent = Intent(this, PlayerBroadcastReceiver::class.java)
+        pauseIntent.setAction(PlayerBroadcastReceiver.ACTION_PAUSE)
+        val pausePendingIntent = PendingIntent.getBroadcast(
+            this, 0, pauseIntent,
+            PendingIntent.FLAG_IMMUTABLE
+        )
+        val resumeIntent = Intent(this, PlayerBroadcastReceiver::class.java)
+        resumeIntent.setAction(PlayerBroadcastReceiver.ACTION_RESUME)
+        val resumePendingIntent = PendingIntent.getBroadcast(
+            this, 0, resumeIntent,
+            PendingIntent.FLAG_IMMUTABLE
+        )
 
-        val mySession = MediaSessionCompat(this, TAG)
-        val sessionToken = mySession.sessionToken
-        val mediaSession = mySession.mediaSession as MediaSession
-        mediaSession.setCallback(object : MediaSession.Callback() {
-            override fun onPause() {
-                super.onPause()
-                Log.d(TAG, "Paused")
-            }
-
-            }, mHandler) // TODO
-//        mediaSession.setMediaButtonBroadcastReceiver(ComponentName(this, PlayerBroadcastReceiver::class.java)) // TODO
 
         val stopAction: NotificationCompat.Action = NotificationCompat.Action(
             R.drawable.ic_stop_24, "Stop", stopPendingIntent
         )
+        val pauseAction: NotificationCompat.Action = NotificationCompat.Action(
+            R.drawable.ic_pause_24, "Pause", pausePendingIntent
+        )
+        val resumeAction: NotificationCompat.Action = NotificationCompat.Action(
+            R.drawable.ic_play_24, "Resume", resumePendingIntent
+        )
+
 
         val notif = builder
             .setSmallIcon(R.drawable.ic_note)
             .setContentTitle("Radio Player")
             .setContentText("Service is running")
             .addAction(stopAction)
-            .addAction(R.drawable.ic_play_64, "play", null)
-            .addAction(R.drawable.ic_downward,"prev", null)
-            .addAction(R.drawable.ic_add_24,"next", null)
-            .setStyle(MediaStyle()
-                .setShowActionsInCompactView(0,1,2)
-                .setMediaSession(sessionToken)
-                )
+            .addAction(pauseAction)
+            .addAction(resumeAction)
+            .setStyle(
+                MediaStyle()
+                    .setShowActionsInCompactView(0, 1, 2)
+                    .setMediaSession(sessionToken)
+            )
             .setContentIntent(resultPendingIntent)
             .setColorized(true)
             .setUsesChronometer(true)
