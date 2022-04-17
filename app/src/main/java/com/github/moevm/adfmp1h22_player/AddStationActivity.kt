@@ -52,7 +52,7 @@ class AddStationActivity : AppCompatActivity() {
                         if(s == nowPlaying){
                             withPlayerService {
                                 it.stopPlayback()
-                                nowPlaying = s
+                                nowPlaying = null
                             }
                         }else {
                             withPlayerService {
