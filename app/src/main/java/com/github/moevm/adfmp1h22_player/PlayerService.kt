@@ -19,16 +19,23 @@ import android.content.Context
 import android.app.*
 import android.content.ComponentName
 import android.content.Intent
+import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.drawable.Icon
 import android.media.*
 import android.os.*
 import android.support.v4.media.session.MediaSessionCompat
 import android.util.Log
+import android.widget.ImageView
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
+import androidx.core.net.toUri
+import androidx.core.view.drawToBitmap
 import androidx.lifecycle.MutableLiveData
 import androidx.media.app.NotificationCompat.MediaStyle
+import com.bumptech.glide.Glide
+import com.squareup.picasso.Picasso
+import okhttp3.internal.notify
 import org.eclipse.jetty.client.HttpClient
 import org.eclipse.jetty.client.api.Request
 import java.nio.ByteBuffer
@@ -841,6 +848,7 @@ class PlayerService : Service() {
     private fun onMetaData(m: TrackMetaData) {
         mMetaData.postValue(m)
         // TODO: update notification
+        this.updateNotification()
         // TODO: update playback history
     }
 
@@ -854,7 +862,8 @@ class PlayerService : Service() {
 
         Log.d(TAG, "playback state: $old -> $ps")
 
-        // TODO: update notification
+
+        this.updateNotification()
 
         if (old != null) {
             val oldfg = old != PlaybackState.STOPPED
@@ -875,7 +884,7 @@ class PlayerService : Service() {
 
     private fun onStationLoading(s: Station?) {
         mMetaData.postValue(null)
-        mStation.postValue(s!!)
+        mStation.postValue(s)
     }
 
     inner class PlayerServiceBinder : Binder() {
@@ -888,6 +897,99 @@ class PlayerService : Service() {
     }
 
     override fun onBind(intent: Intent): IBinder? = PlayerServiceBinder()
+
+    private fun updateNotification() {
+        val nm = getSystemService(NotificationManager::class.java)
+
+        val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val chan = NotificationChannel(
+                NOTIF_CHANNEL_ID,
+                "Default",
+                NotificationManager.IMPORTANCE_HIGH
+            )
+            chan.enableLights(true)
+            chan.lightColor = Color.BLUE
+            nm.createNotificationChannel(chan)
+            NotificationCompat.Builder(this, chan.id)
+        } else {
+            NotificationCompat.Builder(this)
+        }
+
+        val mySession = MediaSessionCompat(this, TAG)
+        val sessionToken = mySession.sessionToken
+
+        val mainPageIntent = Intent(this, MainActivity::class.java)
+        val resultPendingIntent = PendingIntent.getActivity(
+            this, 0, mainPageIntent,
+            PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val stopIntent = Intent(this, PlayerBroadcastReceiver::class.java)
+        stopIntent.setAction(PlayerBroadcastReceiver.ACTION_STOP)
+        val stopPendingIntent = PendingIntent.getBroadcast(
+            this, 0, stopIntent,
+            PendingIntent.FLAG_IMMUTABLE
+        )
+        val pauseIntent = Intent(this, PlayerBroadcastReceiver::class.java)
+        pauseIntent.setAction(PlayerBroadcastReceiver.ACTION_PAUSE)
+        val pausePendingIntent = PendingIntent.getBroadcast(
+            this, 0, pauseIntent,
+            PendingIntent.FLAG_IMMUTABLE
+        )
+        val resumeIntent = Intent(this, PlayerBroadcastReceiver::class.java)
+        resumeIntent.setAction(PlayerBroadcastReceiver.ACTION_RESUME)
+        val resumePendingIntent = PendingIntent.getBroadcast(
+            this, 0, resumeIntent,
+            PendingIntent.FLAG_IMMUTABLE
+        )
+
+
+        val stopAction: NotificationCompat.Action = NotificationCompat.Action(
+            R.drawable.ic_stop_24, "Stop", stopPendingIntent
+        )
+        val pauseAction: NotificationCompat.Action = NotificationCompat.Action(
+            R.drawable.ic_pause_24, "Pause", pausePendingIntent
+        )
+        val resumeAction: NotificationCompat.Action = NotificationCompat.Action(
+            R.drawable.ic_play_24, "Resume", resumePendingIntent
+        )
+
+        if (this.mPlaybackState.value == PlaybackState.PLAYING || this.mPlaybackState.value == PlaybackState.LOADING) {
+            builder.addAction(pauseAction)
+        } else if (this.mPlaybackState.value == PlaybackState.PAUSED) {
+            builder.addAction(resumeAction)
+        }
+
+        val notification = builder
+            .setSmallIcon(R.drawable.ic_note)
+            .setContentTitle(if (mMetaData.value?.title!= null){
+                mMetaData.value?.title
+            } else{
+                mStation.value?.name
+            })
+            .setContentText(mMetaData.value?.artist)
+            .setContentInfo("blablabla")
+            .addAction(stopAction)
+            .setStyle(
+                mediaStyle
+                    .setShowActionsInCompactView(0, 1)
+                    .setMediaSession(sessionToken)
+                    .setCancelButtonIntent(stopPendingIntent)
+                    .setShowCancelButton(true)
+            )
+            .setContentIntent(resultPendingIntent)
+            .setColorized(true)
+            .setUsesChronometer(true)
+            .setColor(Color.MAGENTA)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .build()
+
+        val notificationManager =
+            getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.notify(TAG, NOTIF_ID, notification)
+    }
+
     private fun makeNotification(): Notification {
         val nm = getSystemService(NotificationManager::class.java)
 
@@ -944,13 +1046,22 @@ class PlayerService : Service() {
             R.drawable.ic_play_24, "Resume", resumePendingIntent
         )
 
+        if (this.mPlaybackState.value == PlaybackState.PLAYING || this.mPlaybackState.value == PlaybackState.LOADING) {
+            builder.addAction(pauseAction)
+        } else if (this.mPlaybackState.value == PlaybackState.PAUSED) {
+            builder.addAction(resumeAction)
+        }
 
-        val notif = builder
+
+        val notification = builder
             .setSmallIcon(R.drawable.ic_note)
-            .setContentTitle("Radio Player")
-            .setContentText("Service is running")
-            .addAction(resumeAction)
-            .addAction(pauseAction)
+            .setContentTitle(if (mMetaData.value?.title!= null){
+                mMetaData.value?.title
+            } else{
+                mStation.value?.name
+            })
+            .setContentText(mMetaData.value?.artist)
+            .addAction(stopAction)
             .setStyle(
                 mediaStyle
                     .setShowActionsInCompactView(0, 1)
@@ -966,7 +1077,8 @@ class PlayerService : Service() {
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .build()
 
-        return notif
+
+        return notification
     }
 
     private fun setupThread() {
