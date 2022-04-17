@@ -3,7 +3,6 @@ package com.github.moevm.adfmp1h22_player
 import java.nio.channels.AsynchronousFileChannel
 import java.nio.file.StandardOpenOption
 
-import android.content.ComponentName
 import android.content.ServiceConnection
 
 import java.net.URISyntaxException
@@ -11,55 +10,45 @@ import java.util.concurrent.TimeoutException
 import java.net.UnknownHostException
 import java.net.ConnectException
 
-import org.eclipse.jetty.client.api.Request
 import java.net.URI
-
-import androidx.lifecycle.MutableLiveData
 
 import java.util.LinkedList
 
 import android.content.Context
-import android.widget.Toast
 
-import android.util.Log
-import java.lang.Thread
-
-import java.util.concurrent.ConcurrentLinkedQueue
-import android.media.MediaCodec
-import android.media.MediaFormat
-import android.media.AudioTrack
-import android.media.AudioAttributes
-import android.media.AudioFormat
-import android.media.AudioManager
-
-import org.eclipse.jetty.client.HttpClient
-import java.lang.Exception
-import java.nio.ByteBuffer
-
-import android.os.Build
-import android.app.NotificationManager
-import android.app.NotificationChannel
-import androidx.core.app.NotificationCompat
-import android.app.Notification
-
-import android.os.HandlerThread
-import android.os.Handler
-import android.os.Looper
-import android.os.Message
-
-import android.os.Binder
-import android.os.IBinder
+import android.app.*
+import android.content.ComponentName
 import android.content.Intent
-import android.app.Service
+import android.graphics.Bitmap
+import android.graphics.Color
+import android.graphics.drawable.Icon
+import android.media.*
+import android.os.*
+import android.support.v4.media.session.MediaSessionCompat
+import android.util.Log
+import android.widget.ImageView
+import android.widget.Toast
+import androidx.core.app.NotificationCompat
+import androidx.core.net.toUri
+import androidx.core.view.drawToBitmap
+import androidx.lifecycle.MutableLiveData
+import androidx.media.app.NotificationCompat.MediaStyle
+import com.bumptech.glide.Glide
+import com.squareup.picasso.Picasso
+import okhttp3.internal.notify
+import org.eclipse.jetty.client.HttpClient
+import org.eclipse.jetty.client.api.Request
+import java.nio.ByteBuffer
+import java.util.concurrent.ConcurrentLinkedQueue
 
 
 fun parseTrackTitle(s: String): TrackMetaData {
-    val spl = s.split(" - ", limit=2)
+    val spl = s.split(" - ", limit = 2)
     return if (spl.size == 2) {
         TrackMetaData(
             s,
-            title=spl[1],
-            artist=spl[0],
+            title = spl[1],
+            artist = spl[0],
         )
     } else {
         TrackMetaData(s, s, null)
@@ -108,10 +97,11 @@ class PlayerService : Service() {
     var mAudioSid: Int = -1
     lateinit var mThread: PlayerThread
     lateinit var mHandler: Handler
-    val mMetaData = MutableLiveData<TrackMetaData>()
+    val mMetaData = MutableLiveData<TrackMetaData?>()
     val mPlaybackState = MutableLiveData<PlaybackState>(PlaybackState.STOPPED)
     val mStation = MutableLiveData<Station>()
     val mRecMgrConn = RecMgrSvrConnection()
+    var mediaStyle: MediaStyle = MediaStyle()
 
     inner class RecMgrSvrConnection : ServiceConnection {
         private var mServiceBinder: RecordingManagerService.ServiceBinder? = null
@@ -356,8 +346,10 @@ class PlayerService : Service() {
                                 buf.clear()
 
                                 if (endflag) {
-                                    mc.queueInputBuffer(index, 0, 0, timestamp,
-                                                        MediaCodec.BUFFER_FLAG_END_OF_STREAM)
+                                    mc.queueInputBuffer(
+                                        index, 0, 0, timestamp,
+                                        MediaCodec.BUFFER_FLAG_END_OF_STREAM
+                                    )
                                     return
                                 }
 
@@ -366,8 +358,11 @@ class PlayerService : Service() {
                                 // delay from before entering pause
                                 val ps = paused_bufsize
                                 val can_give = ps == null || bqueue.size > ps
-                                val inf = if (can_give) { bqueue.poll() }
-                                          else { null }
+                                val inf = if (can_give) {
+                                    bqueue.poll()
+                                } else {
+                                    null
+                                }
                                 val t = timestamp
                                 if (inf != null) {
                                     if (inf.buf.remaining() <= buf.remaining()) {
@@ -411,7 +406,8 @@ class PlayerService : Service() {
                                 }
 
                                 while (!metaqueue.isEmpty()
-                                       && info.presentationTimeUs >= metaqueue.get(0).timestamp) {
+                                    && info.presentationTimeUs >= metaqueue.get(0).timestamp
+                                ) {
                                     cb.onMetaData(metaqueue.remove().meta)
                                 }
 
@@ -549,10 +545,10 @@ class PlayerService : Service() {
 
                                                 Log.d(TAG, "requesting recording for ${m.original}")
                                                 recmgr!!.requestNewRecording(m, "audio/mpeg") { r ->
-                                                     handler.post {
-                                                         Log.d(TAG, "new track: ${r.uuid}")
-                                                         streamrec!!.onNewTrack(r)
-                                                     }
+                                                    handler.post {
+                                                        Log.d(TAG, "new track: ${r.uuid}")
+                                                        streamrec!!.onNewTrack(r)
+                                                    }
                                                 }
                                             }
 
@@ -591,13 +587,16 @@ class PlayerService : Service() {
                         )
                         else -> {
                             Log.e(TAG, "aborting, content-type: $content_type")
-                            r.abort(UnsupportedCodecException(
-                                        when (val ct = content_type) {
-                                            "audio/aac" -> "AAC"
-                                            "audio/aacp" -> "AAC+"
-                                            null -> "(no content type)"
-                                            else -> ct
-                                        }))
+                            r.abort(
+                                UnsupportedCodecException(
+                                    when (val ct = content_type) {
+                                        "audio/aac" -> "AAC"
+                                        "audio/aacp" -> "AAC+"
+                                        null -> "(no content type)"
+                                        else -> ct
+                                    }
+                                )
+                            )
                             return@onResponseHeaders
                         }
                     }
@@ -656,8 +655,10 @@ class PlayerService : Service() {
                         )
                     }
 
-                    override fun onTrackDone(r: Recording, chan: AsynchronousFileChannel,
-                                             interrupted: Boolean) {
+                    override fun onTrackDone(
+                        r: Recording, chan: AsynchronousFileChannel,
+                        interrupted: Boolean
+                    ) {
                         Log.d(TAG, "track ${r.uuid} done")
                         chan.close()
                         if (!interrupted) {
@@ -697,7 +698,8 @@ class PlayerService : Service() {
             req.send { r ->
                 handler.post {
                     if (r.getRequestFailure() == null
-                        && r.getResponseFailure() is TerminationMarker) {
+                        && r.getResponseFailure() is TerminationMarker
+                    ) {
                         Log.i(TAG, "HTTP Response terminated")
 
                         // No need to call reset() again
@@ -745,7 +747,7 @@ class PlayerService : Service() {
                 }
                 CMD_PAUSE_PLAYBACK -> {
                     val sz = bqueue.size
-                    paused_bufsize = if (sz >= max_frames) max_frames-1 else sz
+                    paused_bufsize = if (sz >= max_frames) max_frames - 1 else sz
                     cb.onPlaybackStateChanged(PlaybackState.PAUSED)
                     true
                 }
@@ -846,6 +848,7 @@ class PlayerService : Service() {
     private fun onMetaData(m: TrackMetaData) {
         mMetaData.postValue(m)
         // TODO: update notification
+        this.updateNotification()
         // TODO: update playback history
     }
 
@@ -859,7 +862,8 @@ class PlayerService : Service() {
 
         Log.d(TAG, "playback state: $old -> $ps")
 
-        // TODO: update notification
+
+        this.updateNotification()
 
         if (old != null) {
             val oldfg = old != PlaybackState.STOPPED
@@ -885,7 +889,7 @@ class PlayerService : Service() {
 
     inner class PlayerServiceBinder : Binder() {
         val service: PlayerService
-            get () = this@PlayerService
+            get() = this@PlayerService
     }
 
     override fun onStartCommand(intent: Intent, flags: Int, id: Int): Int {
@@ -894,6 +898,98 @@ class PlayerService : Service() {
 
     override fun onBind(intent: Intent): IBinder? = PlayerServiceBinder()
 
+    private fun updateNotification() {
+        val nm = getSystemService(NotificationManager::class.java)
+
+        val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val chan = NotificationChannel(
+                NOTIF_CHANNEL_ID,
+                "Default",
+                NotificationManager.IMPORTANCE_HIGH
+            )
+            chan.enableLights(true)
+            chan.lightColor = Color.BLUE
+            nm.createNotificationChannel(chan)
+            NotificationCompat.Builder(this, chan.id)
+        } else {
+            NotificationCompat.Builder(this)
+        }
+
+        val mySession = MediaSessionCompat(this, TAG)
+        val sessionToken = mySession.sessionToken
+
+        val mainPageIntent = Intent(this, MainActivity::class.java)
+        val resultPendingIntent = PendingIntent.getActivity(
+            this, 0, mainPageIntent,
+            PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val stopIntent = Intent(this, PlayerBroadcastReceiver::class.java)
+        stopIntent.setAction(PlayerBroadcastReceiver.ACTION_STOP)
+        val stopPendingIntent = PendingIntent.getBroadcast(
+            this, 0, stopIntent,
+            PendingIntent.FLAG_IMMUTABLE
+        )
+        val pauseIntent = Intent(this, PlayerBroadcastReceiver::class.java)
+        pauseIntent.setAction(PlayerBroadcastReceiver.ACTION_PAUSE)
+        val pausePendingIntent = PendingIntent.getBroadcast(
+            this, 0, pauseIntent,
+            PendingIntent.FLAG_IMMUTABLE
+        )
+        val resumeIntent = Intent(this, PlayerBroadcastReceiver::class.java)
+        resumeIntent.setAction(PlayerBroadcastReceiver.ACTION_RESUME)
+        val resumePendingIntent = PendingIntent.getBroadcast(
+            this, 0, resumeIntent,
+            PendingIntent.FLAG_IMMUTABLE
+        )
+
+
+        val stopAction: NotificationCompat.Action = NotificationCompat.Action(
+            R.drawable.ic_stop_24, "Stop", stopPendingIntent
+        )
+        val pauseAction: NotificationCompat.Action = NotificationCompat.Action(
+            R.drawable.ic_pause_24, "Pause", pausePendingIntent
+        )
+        val resumeAction: NotificationCompat.Action = NotificationCompat.Action(
+            R.drawable.ic_play_24, "Resume", resumePendingIntent
+        )
+
+        if (this.mPlaybackState.value == PlaybackState.PLAYING || this.mPlaybackState.value == PlaybackState.LOADING) {
+            builder.addAction(pauseAction)
+        } else if (this.mPlaybackState.value == PlaybackState.PAUSED) {
+            builder.addAction(resumeAction)
+        }
+
+        val notification = builder
+            .setSmallIcon(R.drawable.ic_note)
+            .setContentTitle(if (mMetaData.value?.title!= null){
+                mMetaData.value?.title
+            } else{
+                mStation.value?.name
+            })
+            .setContentText(mMetaData.value?.artist)
+            .setContentInfo("blablabla")
+            .addAction(stopAction)
+            .setStyle(
+                mediaStyle
+                    .setShowActionsInCompactView(0, 1)
+                    .setMediaSession(sessionToken)
+                    .setCancelButtonIntent(stopPendingIntent)
+                    .setShowCancelButton(true)
+            )
+            .setContentIntent(resultPendingIntent)
+            .setColorized(true)
+            .setUsesChronometer(true)
+            .setColor(Color.MAGENTA)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .build()
+
+        val notificationManager =
+            getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.notify(NOTIF_ID, notification)
+    }
+
     private fun makeNotification(): Notification {
         val nm = getSystemService(NotificationManager::class.java)
 
@@ -901,22 +997,88 @@ class PlayerService : Service() {
             val chan = NotificationChannel(
                 NOTIF_CHANNEL_ID,
                 "Default",
-                NotificationManager.IMPORTANCE_LOW
+                NotificationManager.IMPORTANCE_HIGH
             )
+            chan.enableLights(true)
+            chan.lightColor = Color.BLUE
             nm.createNotificationChannel(chan)
             NotificationCompat.Builder(this, chan.id)
         } else {
             NotificationCompat.Builder(this)
         }
 
-        val notif = builder
+        val mySession = MediaSessionCompat(this, TAG)
+        val sessionToken = mySession.sessionToken
+
+        val mainPageIntent = Intent(this, MainActivity::class.java)
+        val resultPendingIntent = PendingIntent.getActivity(
+            this, 0, mainPageIntent,
+            PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val stopIntent = Intent(this, PlayerBroadcastReceiver::class.java)
+        stopIntent.setAction(PlayerBroadcastReceiver.ACTION_STOP)
+        val stopPendingIntent = PendingIntent.getBroadcast(
+            this, 0, stopIntent,
+            PendingIntent.FLAG_IMMUTABLE
+        )
+        val pauseIntent = Intent(this, PlayerBroadcastReceiver::class.java)
+        pauseIntent.setAction(PlayerBroadcastReceiver.ACTION_PAUSE)
+        val pausePendingIntent = PendingIntent.getBroadcast(
+            this, 0, pauseIntent,
+            PendingIntent.FLAG_IMMUTABLE
+        )
+        val resumeIntent = Intent(this, PlayerBroadcastReceiver::class.java)
+        resumeIntent.setAction(PlayerBroadcastReceiver.ACTION_RESUME)
+        val resumePendingIntent = PendingIntent.getBroadcast(
+            this, 0, resumeIntent,
+            PendingIntent.FLAG_IMMUTABLE
+        )
+
+
+        val stopAction: NotificationCompat.Action = NotificationCompat.Action(
+            R.drawable.ic_stop_24, "Stop", stopPendingIntent
+        )
+        val pauseAction: NotificationCompat.Action = NotificationCompat.Action(
+            R.drawable.ic_pause_24, "Pause", pausePendingIntent
+        )
+        val resumeAction: NotificationCompat.Action = NotificationCompat.Action(
+            R.drawable.ic_play_24, "Resume", resumePendingIntent
+        )
+
+        if (this.mPlaybackState.value == PlaybackState.PLAYING || this.mPlaybackState.value == PlaybackState.LOADING) {
+            builder.addAction(pauseAction)
+        } else if (this.mPlaybackState.value == PlaybackState.PAUSED) {
+            builder.addAction(resumeAction)
+        }
+
+
+        val notification = builder
             .setSmallIcon(R.drawable.ic_note)
-            .setContentTitle("Radio Player")
-            .setContentText("Service is running")
+            .setContentTitle(if (mMetaData.value?.title!= null){
+                mMetaData.value?.title
+            } else{
+                mStation.value?.name
+            })
+            .setContentText(mMetaData.value?.artist)
+            .addAction(stopAction)
+            .setStyle(
+                mediaStyle
+                    .setShowActionsInCompactView(0, 1)
+                    .setMediaSession(sessionToken)
+                    .setCancelButtonIntent(stopPendingIntent)
+                    .setShowCancelButton(true)
+            )
+            .setContentIntent(resultPendingIntent)
+            .setColorized(true)
+            .setUsesChronometer(true)
+            .setColor(Color.MAGENTA)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .build()
 
-        return notif
+
+        return notification
     }
 
     private fun setupThread() {
