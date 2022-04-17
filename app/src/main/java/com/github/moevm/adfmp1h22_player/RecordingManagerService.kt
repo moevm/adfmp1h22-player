@@ -39,7 +39,9 @@ import android.app.Service
 import android.content.ContentValues
 import android.database.Cursor
 import com.github.moevm.adfmp1h22_player.SQLite.SQLHelper
+import com.github.moevm.adfmp1h22_player.SQLite.SQLiteAddedStationsManager
 import com.github.moevm.adfmp1h22_player.SQLite.SQLiteContract
+import com.github.moevm.adfmp1h22_player.SQLite.SQLiteHistoryManager
 
 class RecordingManagerService : Service() {
 
@@ -244,7 +246,10 @@ class RecordingManagerService : Service() {
                 db.insert(SQLiteContract.RecordingsTable.TABLE_NAME,
                           null, encodeRecording(r))
             }
-
+            ///
+            val manager = SQLiteHistoryManager(mDbHelper)
+            manager.insertRow(md)
+            ///
             cb(r)
         }
 

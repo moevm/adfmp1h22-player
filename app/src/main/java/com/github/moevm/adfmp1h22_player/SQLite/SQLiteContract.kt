@@ -27,7 +27,14 @@ object SQLiteContract {
         const val COLUMN_FAVICON_DATE = "faviconDate"
         const val COLUMN_STREAMURL = "streamUrl"
     }
-    object HistoryTable{}
+    object HistoryTable{
+        const val TABLE_NAME = "History"
+        const val COLUMN_ID = "id"
+        const val COLUMN_TRACK_ORIGTITLE = "track_origtitle"
+        const val COLUMN_TRACK_ARTIST = "track_artist"
+        const val COLUMN_TRACK_TITLE = "track_title"
+
+    }
     object RecordingsTable {
         const val TABLE_NAME = "RecordingsTable"
         const val COLUMN_UUID = "uuid"

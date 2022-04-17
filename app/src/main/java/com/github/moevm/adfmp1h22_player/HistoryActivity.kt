@@ -3,6 +3,9 @@ package com.github.moevm.adfmp1h22_player
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.github.moevm.adfmp1h22_player.SQLite.SQLHelper
+import com.github.moevm.adfmp1h22_player.SQLite.SQLiteAddedStationsManager
+import com.github.moevm.adfmp1h22_player.SQLite.SQLiteHistoryManager
 import kotlinx.android.synthetic.main.activity_history.*
 import kotlinx.android.synthetic.main.activity_save_tracks.*
 
@@ -13,13 +16,9 @@ class HistoryActivity : AppCompatActivity() {
 
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
-        var historyList = mutableListOf<Track>()
-
-        val progress = 10
-        for(i in 0..progress){
-            val track : Track = Track(i,"Item${i}","ItemArtist${i}", false)
-            historyList.add(i, track)
-        }
+        val db = SQLHelper(applicationContext)
+        val manager = SQLiteHistoryManager(db)
+        val historyList = manager.getData();
 
         var HistoryAdapter = HistoryAdapter(historyList)
 

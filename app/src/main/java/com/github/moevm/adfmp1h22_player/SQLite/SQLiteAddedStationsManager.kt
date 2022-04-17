@@ -24,7 +24,7 @@ class SQLiteAddedStationsManager(
                 SQLiteContract.AddedStationsTable.COLUMN_CODEC to item.codec,
                 SQLiteContract.AddedStationsTable.COLUMN_HOMEPAGE to item.homepage,
                 SQLiteContract.AddedStationsTable.COLUMN_COUNTRY to item.country,
-                SQLiteContract.AddedStationsTable.COLUMN_FAVICON_DATE to System.currentTimeMillis().toInt()
+                SQLiteContract.AddedStationsTable.COLUMN_FAVICON_DATE to System.currentTimeMillis()
             ),
             SQLiteDatabase.CONFLICT_REPLACE
         )

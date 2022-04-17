@@ -97,7 +97,7 @@ class AddStationAdapter(
             }
         }
 
-
+        holder.favicon.setImageResource(R.drawable.ic_station_placeholder_54)
         val imageURL = station.faviconUrl
         if(imageURL != ""){
             Picasso.get()
@@ -130,6 +130,7 @@ class AddStationAdapter(
 //            holder.addButton.setEnabled(false)
             val t : Thread = object  : Thread(){
                 override fun run(){
+                    Log.d("TAG", station.faviconUrl)
                     manager.insertRow(station)
                 }
             }

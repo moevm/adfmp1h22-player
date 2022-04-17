@@ -7,7 +7,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 
-class HistoryAdapter(private val tracks: List<Track>) :
+class HistoryAdapter(private val tracks: List<TrackMetaData>) :
     RecyclerView.Adapter<HistoryAdapter.Holder>()
 {
 
@@ -22,7 +22,7 @@ class HistoryAdapter(private val tracks: List<Track>) :
         var track = tracks[position]
         holder.itemView.tag = track
         holder.artist.text = track.artist
-        holder.trName.text = track.name
+        holder.trName.text = track.title
     }
 
 

@@ -49,7 +49,7 @@ class SQLiteAllStationsManager(
                         SQLiteContract.AllStationsTable.COLUMN_CODEC to item.codec,
                         SQLiteContract.AllStationsTable.COLUMN_HOMEPAGE to item.homepage,
                         SQLiteContract.AllStationsTable.COLUMN_COUNTRY to item.country,
-                        SQLiteContract.AllStationsTable.COLUMN_FAVICON_DATE to System.currentTimeMillis().toInt()
+                        SQLiteContract.AllStationsTable.COLUMN_FAVICON_DATE to System.currentTimeMillis()
                     ),
                     SQLiteDatabase.CONFLICT_REPLACE
                 )

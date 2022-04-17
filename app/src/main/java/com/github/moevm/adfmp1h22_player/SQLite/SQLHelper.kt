@@ -40,22 +40,28 @@ class SQLHelper(
                 " INTEGER NOT NULL)"
         db.execSQL(createTableAddedStations)
 
+        db.execSQL(SQLiteContract.HistoryTable.run { """
+            CREATE TABLE IF NOT EXISTS $TABLE_NAME (
+            $COLUMN_ID            INTEGER PRIMARY KEY AUTOINCREMENT,
+            $COLUMN_TRACK_ORIGTITLE TEXT NOT NULL,
+            $COLUMN_TRACK_ARTIST    TEXT,
+            $COLUMN_TRACK_TITLE     TEXT NOT NULL)"""
+        })
+
+
         db.execSQL(SQLiteContract.RecordingsTable.run { """
-CREATE TABLE IF NOT EXISTS $TABLE_NAME (
-  $COLUMN_UUID            STRING PRIMARY KEY,
-  $COLUMN_TRACK_ORIGTITLE TEXT NOT NULL,
-  $COLUMN_TRACK_ARTIST    TEXT,
-  $COLUMN_TRACK_TITLE     TEXT NOT NULL,
-  $COLUMN_TIMESTAMP       INTEGER NOT NULL,
-  $COLUMN_MIME_TYPE       TEXT NOT NULL,
-  $COLUMN_STATE           INTEGER NOT NULL
-)
-""" })
+            CREATE TABLE IF NOT EXISTS $TABLE_NAME (
+            $COLUMN_UUID            STRING PRIMARY KEY,
+            $COLUMN_TRACK_ORIGTITLE TEXT NOT NULL,
+            $COLUMN_TRACK_ARTIST    TEXT,
+            $COLUMN_TRACK_TITLE     TEXT NOT NULL,
+            $COLUMN_TIMESTAMP       INTEGER NOT NULL,
+            $COLUMN_MIME_TYPE       TEXT NOT NULL,
+            $COLUMN_STATE           INTEGER NOT NULL)"""
+        })
 
     }
 
-    override fun onUpgrade(db: SQLiteDatabase?, p1: Int, p2: Int) {
-
-    }
+    override fun onUpgrade(db: SQLiteDatabase?, p1: Int, p2: Int) {}
 
 }
