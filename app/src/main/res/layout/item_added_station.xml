@@ -18,7 +18,6 @@
         android:layout_height="54dp"
         android:maxWidth="54dp"
         android:maxHeight="54dp"
-        android:scaleType="centerInside"
         android:src="@drawable/ic_station_placeholder_54"
         />
 
