@@ -33,7 +33,6 @@ import androidx.core.net.toUri
 import androidx.core.view.drawToBitmap
 import androidx.lifecycle.MutableLiveData
 import androidx.media.app.NotificationCompat.MediaStyle
-import com.bumptech.glide.Glide
 import com.squareup.picasso.Picasso
 import okhttp3.internal.notify
 import org.eclipse.jetty.client.HttpClient
