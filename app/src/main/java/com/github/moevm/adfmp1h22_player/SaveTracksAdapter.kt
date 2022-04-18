@@ -9,38 +9,57 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 
 
-class SaveTracksAdapter(private val tracks: List<Track>) :
-    RecyclerView.Adapter<SaveTracksAdapter.Holder>(),
-    View.OnClickListener
+class SaveTracksAdapter(
+    private val clickCallback: (Recording) -> Unit,
+) : RecyclerView.Adapter<SaveTracksAdapter.Holder>()
 {
 
-    override fun getItemCount(): Int = tracks.size
+    private var recordings: ArrayList<Recording>()
+
+    @SuppressLint("NotifyDataSetChanged")
+    fun setStations(newRecs: List<Recording>){
+        recordings = newRecs
+        notifyDataSetChanged()
+    }
+
+    override fun getItemCount(): Int = recordings.size
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): Holder {
-        val v : View = LayoutInflater.from(parent.context).inflate(R.layout.item_track, parent, false)
-        v.setOnClickListener(this)
-        return Holder(v)
+        val v : View = LayoutInflater.from(parent.context)
+            .inflate(R.layout.item_track, parent, false)
+        val h = Holder(v)
+        v.setOnClickListener {
+            val r = h.rec
+            if (r != null)
+                clickCallback(r)
+            }
+        }
+        return h
     }
 
     override fun onBindViewHolder(holder: Holder, position: Int) {
-        var track = tracks[position]
-        holder.itemView.tag = track
-        holder.artist.text = track.artist
-        holder.trName.text = track.name
-        if(track.status){
+        var rec = recordings[position]
+
+        holder.rec = rec
+
+        val a = rec.metadata.artist
+        if (a != null) {
+            holder.artist.text = a
+            holder.artist.setVisible(true)
+        } else {
+            holder.artist.setVisible(false)
+        }
+
+        holder.trName.text = rec.metadata.title
+        if (rec.status == Recording.STATUS_SAVED) {
             holder.done.visibility = android.view.View.VISIBLE
             holder.download.visibility = android.view.View.GONE
             holder.itemView.isEnabled = false
-            holder.trName.setTextColor(Color.LTGRAY)
-            holder.artist.setTextColor(Color.LTGRAY)
-            holder.done.setColorFilter(Color.LTGRAY)
-
+        } else {
+            holder.done.visibility = android.view.View.GONE
+            holder.download.visibility = android.view.View.VISIBLE
+            holder.itemView.isEnabled = true
         }
-    }
-
-    override fun onClick(p0: View?) {
-        (p0?.tag as Track).status = true
-        onBindViewHolder(Holder(p0), tracks.indexOf((p0?.tag as Track)))
     }
 
     class Holder(view: View) : RecyclerView.ViewHolder(view) {
@@ -49,6 +68,8 @@ class SaveTracksAdapter(private val tracks: List<Track>) :
         val img : ImageView = view.findViewById(R.id.imageStationAvatar)
         val download : ImageView = view.findViewById(R.id.imageDownload)
         val done : ImageView = view.findViewById(R.id.imageDone)
+
+        var rec: Recording? = null
     }
 
 }
