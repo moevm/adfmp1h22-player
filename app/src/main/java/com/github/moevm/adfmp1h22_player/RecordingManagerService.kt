@@ -324,6 +324,8 @@ class RecordingManagerService : Service() {
 
             updateRecordingState(r, Recording.STATE_SAVED)
 
+            handleCmdFetchRecordings()
+
             cb(true)
         }
 
