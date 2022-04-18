@@ -37,7 +37,8 @@ class SQLiteHistoryManager(
         Log.d("TAG","in getData()")
         val c: Cursor = db.query(
             SQLiteContract.HistoryTable.TABLE_NAME,
-            null, null, null, null, null, null
+            null, null, null, null, null,
+            "${SQLiteContract.HistoryTable.COLUMN_ID} DESC"
         )
         return c.use {
             val list = mutableListOf<TrackMetaData>()
