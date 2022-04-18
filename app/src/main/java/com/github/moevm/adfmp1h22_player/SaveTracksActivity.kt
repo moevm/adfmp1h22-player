@@ -38,26 +38,31 @@ class SaveTracksActivity : AppCompatActivity() {
     private val mGetSaveDirectory =
         registerForActivityResult(OpenDocumentTree()) { uri ->
 
-        if (uri != null) {
-            Log.d(TAG, "set save folder: $uri")
-            mPref.edit().putString("folder", uri.toString()).apply()
+            if (uri != null) {
+                Log.d(TAG, "set save folder: $uri")
+                mPref.edit().putString("folder", uri.toString()).apply()
 
-            val cr = getContentResolver()
-            cr.takePersistableUriPermission(
-                uri,
-                Intent.FLAG_GRANT_READ_URI_PERMISSION
-                or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                val cr = getContentResolver()
+                cr.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                            or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                )
 
-            while (!mSaveQueue.isEmpty()) {
-                val cb = mSaveQueue.remove()
-                cb(uri)
+                while (!mSaveQueue.isEmpty()) {
+                    val cb = mSaveQueue.remove()
+                    cb(uri)
+                }
             }
         }
-    }
 
     private fun requestSaveDirectory(cb: (Uri) -> Unit) {
         val saveurl = mPref.getString("folder", null)
-        val u = if (saveurl != null) { Uri.parse(saveurl) } else { null }
+        val u = if (saveurl != null) {
+            Uri.parse(saveurl)
+        } else {
+            null
+        }
 
         Log.d(TAG, "rsd u = $u")
 
@@ -72,30 +77,39 @@ class SaveTracksActivity : AppCompatActivity() {
         }
     }
 
+    val saveTrackAdapter: SaveTracksAdapter = SaveTracksAdapter {
+        requestSaveDirectory { uri ->
+            val rec = it
+            Log.d(TAG, "save of $rec")
+            withRecordingsService {
+                it.saveRecording(uri, rec) { ok ->
+                    val text = if (ok) {
+                        "Track saved"
+                    } else {
+                        "Error saving track"
+                    }
+                    Toast.makeText(this, text, Toast.LENGTH_LONG)
+                        .show()
+                }
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_save_tracks)
 
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
-        var tracksList = mutableListOf<Track>()
-        val progress = 10
-        for(i in 0..progress){
-            val track : Track = Track(i,"Item${i}","ItemArtist${i}", false)
-            tracksList.add(i, track)
-        }
-
-        var SaveTrackAdapter = SaveTracksAdapter(tracksList)
-
-        val layoutManager = LinearLayoutManager(this)
-        tracksListRV.layoutManager = layoutManager
-        tracksListRV.adapter = SaveTrackAdapter
-
         mPref = getSharedPreferences("Table", Context.MODE_PRIVATE)!!
 
         val i = Intent(this, RecordingManagerService::class.java)
         startService(i)
         bindService(i, mServiceConnection, 0)
+
+        tracksListRV.adapter = saveTrackAdapter
+        val layoutManager = LinearLayoutManager(this)
+        tracksListRV.layoutManager = layoutManager
     }
 
     private val mServiceConnection = RecordingsServiceConnection()
@@ -105,18 +119,12 @@ class SaveTracksActivity : AppCompatActivity() {
         private val mCallbackQueue =
             LinkedList<(RecordingManagerService) -> Unit>()
 
-        // NOTE: remove after implementing save from recycler
-        public var mLastRec: Recording? = null
-
         override fun onServiceConnected(n: ComponentName, sb: IBinder) {
             mServiceBinder = sb as RecordingManagerService.ServiceBinder
             sb.service.mRecordingsList.observe(this@SaveTracksActivity) { rl ->
                 Log.d(TAG, "received recordings list of size ${rl.size}")
 
-                // TODO: update list in recycler
-
-                mLastRec = if (rl != null && rl.size > 0) { rl[0] } else { null }
-
+                saveTrackAdapter.setRecordings(rl)
             }
             while (!mCallbackQueue.isEmpty()) {
                 val cb = mCallbackQueue.remove()
@@ -153,27 +161,11 @@ class SaveTracksActivity : AppCompatActivity() {
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return true
         return when (item.itemId) {
             R.id.save_tracks_tmp_save_last -> {
                 Log.d(TAG, "start save")
-                requestSaveDirectory { uri ->
-                    val rec = mServiceConnection.mLastRec
-                    Log.d(TAG, "save of $rec")
-                    if (rec != null) {
-                        withRecordingsService {
-                            it.saveRecording(uri, rec) { ok ->
 
-                                val text = if (ok) {
-                                    "Track saved"
-                                } else {
-                                    "Error saving track"
-                                }
-                                Toast.makeText(this, text, Toast.LENGTH_LONG)
-                                    .show()
-                            }
-                        }
-                    }
-                }
                 true
             }
             else -> super.onOptionsItemSelected(item)
