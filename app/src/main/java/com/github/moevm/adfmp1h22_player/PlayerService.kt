@@ -33,7 +33,6 @@ import androidx.core.net.toUri
 import androidx.core.view.drawToBitmap
 import androidx.lifecycle.MutableLiveData
 import androidx.media.app.NotificationCompat.MediaStyle
-import com.bumptech.glide.Glide
 import com.squareup.picasso.Picasso
 import okhttp3.internal.notify
 import org.eclipse.jetty.client.HttpClient
@@ -905,7 +904,7 @@ class PlayerService : Service() {
             val chan = NotificationChannel(
                 NOTIF_CHANNEL_ID,
                 "Default",
-                NotificationManager.IMPORTANCE_HIGH
+                NotificationManager.IMPORTANCE_LOW
             )
             chan.enableLights(true)
             chan.lightColor = Color.BLUE
