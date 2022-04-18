@@ -155,23 +155,6 @@ class SaveTracksActivity : AppCompatActivity() {
         unbindService(mServiceConnection)
     }
 
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menuInflater.inflate(R.menu.save_tracks_menu, menu)
-        return true
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return true
-        return when (item.itemId) {
-            R.id.save_tracks_tmp_save_last -> {
-                Log.d(TAG, "start save")
-
-                true
-            }
-            else -> super.onOptionsItemSelected(item)
-        }
-    }
-
     override fun onSupportNavigateUp(): Boolean {
         finish()
         return true
